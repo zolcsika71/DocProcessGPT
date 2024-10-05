@@ -1,6 +1,6 @@
 import os
 import logging
-from flask import Flask, request, jsonify, render_template, send_file, abort
+from flask import Flask, request, jsonify, render_template, send_file, abort, send_from_directory
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
 from pdf_processor import extract_text_from_pdf
@@ -14,7 +14,16 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 @app.route('/', methods=['GET'])
 def index():
-    return render_template('upload.html')
+    try:
+        app.logger.info("Rendering index page")
+        return render_template('upload.html')
+    except Exception as e:
+        app.logger.error(f"Error rendering index page: {str(e)}")
+        return jsonify({"error": "Internal Server Error"}), 500
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory('static', filename)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
