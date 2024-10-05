@@ -1,6 +1,7 @@
 import os
 import logging
 import threading
+import mimetypes
 from flask import Flask, request, jsonify, render_template, send_file, abort, send_from_directory
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
@@ -36,20 +37,23 @@ def upload_file():
         if file.filename == '':
             app.logger.error("No selected file")
             return jsonify({'error': 'No selected file'}), 400
-        if file and file.filename.lower().endswith('.pdf'):
-            filename = secure_filename(file.filename)
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
-            
-            app.logger.info(f"File saved: {filepath}")
-            
-            # Start processing in a background thread
-            threading.Thread(target=process_pdf, args=(filepath, filename)).start()
-            
-            return render_template('processing.html', filename=filename)
-        else:
-            app.logger.error(f"Invalid file format: {file.filename}")
-            return jsonify({'error': 'Invalid file format. Please upload a PDF file.'}), 400
+        
+        # Check MIME type
+        mime_type, _ = mimetypes.guess_type(file.filename)
+        if mime_type != 'application/pdf':
+            app.logger.error(f"Invalid file type: {mime_type}")
+            return jsonify({'error': 'Invalid file type. Please upload a PDF file.'}), 400
+        
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        app.logger.info(f"File saved: {filepath}")
+        
+        # Start processing in a background thread
+        threading.Thread(target=process_pdf, args=(filepath, filename)).start()
+        
+        return render_template('processing.html', filename=filename)
     except Exception as e:
         app.logger.error(f"Error in upload_file: {str(e)}")
         return jsonify({'error': str(e)}), 500
