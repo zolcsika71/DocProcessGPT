@@ -71,6 +71,17 @@ def process_pdf(filepath, filename):
         file_size = os.path.getsize(filepath)
         app.logger.info(f"File size: {file_size} bytes")
         
+        # File reading
+        try:
+            with open(filepath, 'rb') as file:
+                app.logger.info(f"File opened successfully: {filepath}")
+        except IOError as e:
+            error_msg = f"Error opening file: {str(e)}"
+            app.logger.error(error_msg)
+            processing_status[filename] = {'status': 'error', 'details': error_msg}
+            return
+        
+        # Text extraction
         processing_status[filename]['details'] = 'Extracting text from PDF...'
         start_time = time.time()
         app.logger.info("Extracting text from PDF")
@@ -80,10 +91,12 @@ def process_pdf(filepath, filename):
             app.logger.info(f"Text extracted from PDF, length: {len(raw_text)}, time taken: {extraction_time:.2f} seconds")
             processing_status[filename]['details'] = f'Text extracted, length: {len(raw_text)} characters'
         except Exception as e:
-            app.logger.error(f"Error extracting text from PDF: {str(e)}")
-            processing_status[filename] = {'status': 'error', 'details': f'Error extracting text: {str(e)}'}
+            error_msg = f"Error extracting text from PDF: {str(e)}"
+            app.logger.error(error_msg)
+            processing_status[filename] = {'status': 'error', 'details': error_msg}
             return
         
+        # Text preprocessing
         processing_status[filename]['details'] = 'Preprocessing extracted text...'
         start_time = time.time()
         app.logger.info("Preprocessing extracted text")
@@ -93,27 +106,36 @@ def process_pdf(filepath, filename):
             app.logger.info(f"Text preprocessed, length: {len(processed_text)}, time taken: {preprocessing_time:.2f} seconds")
             processing_status[filename]['details'] = f'Text preprocessed, length: {len(processed_text)} characters'
         except Exception as e:
-            app.logger.error(f"Error preprocessing text: {str(e)}")
-            processing_status[filename] = {'status': 'error', 'details': f'Error preprocessing text: {str(e)}'}
+            error_msg = f"Error preprocessing text: {str(e)}"
+            app.logger.error(error_msg)
+            processing_status[filename] = {'status': 'error', 'details': error_msg}
             return
         
+        # Saving processed text
         processed_filename = f"processed_{filename}.txt"
         processed_filepath = os.path.join(app.config['UPLOAD_FOLDER'], processed_filename)
         app.logger.info(f"Saving processed text to: {processed_filepath}")
         processing_status[filename]['details'] = 'Saving processed text...'
         start_time = time.time()
-        with open(processed_filepath, 'w', encoding='utf-8') as f:
-            f.write(processed_text)
-        saving_time = time.time() - start_time
-        app.logger.info(f"Processed text saved successfully: {processed_filepath}, time taken: {saving_time:.2f} seconds")
+        try:
+            with open(processed_filepath, 'w', encoding='utf-8') as f:
+                f.write(processed_text)
+            saving_time = time.time() - start_time
+            app.logger.info(f"Processed text saved successfully: {processed_filepath}, time taken: {saving_time:.2f} seconds")
+        except IOError as e:
+            error_msg = f"Error saving processed text: {str(e)}"
+            app.logger.error(error_msg)
+            processing_status[filename] = {'status': 'error', 'details': error_msg}
+            return
         
         total_time = extraction_time + preprocessing_time + saving_time
         app.logger.info(f"Total processing time: {total_time:.2f} seconds")
         
         processing_status[filename] = {'status': 'complete', 'filename': processed_filename, 'details': f'Processing completed in {total_time:.2f} seconds'}
     except Exception as e:
-        app.logger.error(f"Error processing PDF {filename}: {str(e)}")
-        processing_status[filename] = {'status': 'error', 'details': f'Error processing PDF: {str(e)}'}
+        error_msg = f"Unexpected error processing PDF {filename}: {str(e)}"
+        app.logger.error(error_msg)
+        processing_status[filename] = {'status': 'error', 'details': error_msg}
 
 @app.route('/process_status/<filename>', methods=['GET'])
 def process_status(filename):

@@ -23,6 +23,20 @@
             margin-top: 20px;
             font-style: italic;
         }
+        .error-message {
+            color: #ff0000;
+            font-weight: bold;
+        }
+        .try-again-btn {
+            display: none;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -34,6 +48,7 @@
         <p id="status">Processing your PDF file, please wait...</p>
         <p id="status-details"></p>
         <div id="result"></div>
+        <button id="try-again-btn" class="try-again-btn" onclick="location.reload();">Try Again</button>
     </div>
     <script>
         console.log("Processing page loaded");
@@ -45,6 +60,11 @@
             const progressBar = document.getElementById('progress-bar');
             progressBar.style.width = percentage + '%';
             console.log(`Progress updated: ${percentage}%`);
+        }
+
+        function showError(message) {
+            document.getElementById('status').innerHTML = `<span class="error-message">Error: ${message}</span>`;
+            document.getElementById('try-again-btn').style.display = 'inline-block';
         }
 
         function checkStatus() {
@@ -63,9 +83,8 @@
                         document.getElementById('result').innerHTML = `<a href="/processed/${data.filename}" download>Download processed text</a>`;
                     } else if (data.status === 'error') {
                         updateProgressBar(100);
-                        document.getElementById('status').textContent = `Error: ${data.error}`;
+                        showError(data.details);
                         document.getElementById('status-details').textContent = 'An error occurred during processing.';
-                        document.getElementById('result').innerHTML = '<p>Please try uploading the file again.</p>';
                     } else if (attempts < maxAttempts) {
                         attempts++;
                         const progress = Math.min((attempts / maxAttempts) * 100, 99);
@@ -75,17 +94,15 @@
                         setTimeout(checkStatus, 2000);
                     } else {
                         updateProgressBar(100);
-                        document.getElementById('status').textContent = 'Processing timed out. Please try again.';
+                        showError('Processing timed out. Please try again.');
                         document.getElementById('status-details').textContent = 'The process took too long to complete.';
-                        document.getElementById('result').innerHTML = '<p>Please try uploading the file again.</p>';
                     }
                 })
                 .catch(error => {
                     console.error('Error checking status:', error);
                     updateProgressBar(100);
-                    document.getElementById('status').textContent = 'An error occurred while processing the PDF.';
+                    showError('An error occurred while processing the PDF.');
                     document.getElementById('status-details').textContent = 'There was a problem communicating with the server.';
-                    document.getElementById('result').innerHTML = '<p>Please try uploading the file again.</p>';
                 });
         }
 
@@ -96,9 +113,8 @@
         setTimeout(() => {
             if (document.getElementById('status').textContent.includes('Processing')) {
                 updateProgressBar(100);
-                document.getElementById('status').textContent = 'Processing timed out. Please try again.';
+                showError('Processing timed out. Please try again.');
                 document.getElementById('status-details').textContent = 'The process took too long to complete.';
-                document.getElementById('result').innerHTML = '<p>Please try uploading the file again.</p>';
             }
         }, timeoutDuration);
     </script>
