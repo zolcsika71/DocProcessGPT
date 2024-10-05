@@ -57,18 +57,24 @@ def upload_file():
 def process_pdf(filepath, filename):
     try:
         app.logger.info(f"Starting PDF processing for {filename}")
-        
-        app.logger.info(f"Reading file: {filepath}")
-        with open(filepath, 'rb') as file:
-            app.logger.info(f"File opened successfully: {filepath}")
+        file_size = os.path.getsize(filepath)
+        app.logger.info(f"File size: {file_size} bytes")
         
         app.logger.info("Extracting text from PDF")
-        raw_text = extract_text_from_pdf(filepath)
-        app.logger.info(f"Text extracted from PDF, length: {len(raw_text)}")
+        try:
+            raw_text = extract_text_from_pdf(filepath)
+            app.logger.info(f"Text extracted from PDF, length: {len(raw_text)}")
+        except Exception as e:
+            app.logger.error(f"Error extracting text from PDF: {str(e)}")
+            raise
         
         app.logger.info("Preprocessing extracted text")
-        processed_text = preprocess_text(raw_text)
-        app.logger.info(f"Text preprocessed, length: {len(processed_text)}")
+        try:
+            processed_text = preprocess_text(raw_text)
+            app.logger.info(f"Text preprocessed, length: {len(processed_text)}")
+        except Exception as e:
+            app.logger.error(f"Error preprocessing text: {str(e)}")
+            raise
         
         processed_filename = f"processed_{filename}.txt"
         processed_filepath = os.path.join(app.config['UPLOAD_FOLDER'], processed_filename)

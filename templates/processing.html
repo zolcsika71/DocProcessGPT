@@ -5,10 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Processing PDF</title>
     <link rel="stylesheet" href="{{ url_for('serve_static', filename='styles.css') }}">
+    <style>
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <h1>Processing PDF</h1>
+        <div id="spinner" class="spinner"></div>
         <p id="status">Processing your PDF file, please wait...</p>
         <div id="result"></div>
     </div>
@@ -28,20 +44,28 @@
                 .then(data => {
                     console.log("Status check response:", data);
                     if (data.status === 'complete') {
+                        document.getElementById('spinner').style.display = 'none';
                         document.getElementById('status').textContent = 'Processing complete!';
                         document.getElementById('result').innerHTML = `<a href="/processed/${data.filename}" download>Download processed text</a>`;
                     } else if (data.status === 'error') {
+                        document.getElementById('spinner').style.display = 'none';
                         document.getElementById('status').textContent = `Error: ${data.error}`;
+                        document.getElementById('result').innerHTML = '<p>Please try uploading the file again.</p>';
                     } else if (attempts < maxAttempts) {
                         attempts++;
+                        document.getElementById('status').textContent = `Processing your PDF file, please wait... (Attempt ${attempts}/${maxAttempts})`;
                         setTimeout(checkStatus, 2000);
                     } else {
+                        document.getElementById('spinner').style.display = 'none';
                         document.getElementById('status').textContent = 'Processing timed out. Please try again.';
+                        document.getElementById('result').innerHTML = '<p>The process took too long. Please try uploading the file again.</p>';
                     }
                 })
                 .catch(error => {
                     console.error('Error checking status:', error);
+                    document.getElementById('spinner').style.display = 'none';
                     document.getElementById('status').textContent = 'An error occurred while processing the PDF.';
+                    document.getElementById('result').innerHTML = '<p>Please try uploading the file again.</p>';
                 });
         }
 
@@ -51,7 +75,9 @@
         // Set a timeout for the entire process
         setTimeout(() => {
             if (document.getElementById('status').textContent.includes('Processing')) {
+                document.getElementById('spinner').style.display = 'none';
                 document.getElementById('status').textContent = 'Processing timed out. Please try again.';
+                document.getElementById('result').innerHTML = '<p>The process took too long. Please try uploading the file again.</p>';
             }
         }, timeoutDuration);
     </script>
