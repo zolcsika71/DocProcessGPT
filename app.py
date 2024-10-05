@@ -60,13 +60,26 @@ def upload_file():
             
             app.logger.info(f"Processed text saved: {processed_filepath}")
             
-            return jsonify({'message': 'File successfully processed', 'filename': processed_filename}), 200
+            # Instead of returning JSON, render a template with the processing status
+            return render_template('processing.html', filename=filename)
         else:
             app.logger.error(f"Invalid file format: {file.filename}")
             return jsonify({'error': 'Invalid file format. Please upload a PDF file.'}), 400
     except Exception as e:
         app.logger.error(f"Error in upload_file: {str(e)}")
         raise
+
+@app.route('/process_status/<filename>', methods=['GET'])
+def process_status(filename):
+    processed_filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"processed_{filename}.txt")
+    if os.path.exists(processed_filepath):
+        return jsonify({'status': 'complete', 'filename': f"processed_{filename}.txt"})
+    else:
+        return jsonify({'status': 'processing'})
+
+@app.route('/processing/<filename>')
+def processing(filename):
+    return render_template('processing.html', filename=filename)
 
 @app.route('/processed/<filename>', methods=['GET'])
 def get_processed_text(filename):

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processing PDF</title>
+    <link rel="stylesheet" href="{{ url_for('serve_static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Processing PDF</h1>
+        <p id="status">Processing your PDF file, please wait...</p>
+        <div id="result"></div>
+    </div>
+    <script>
+        console.log("Processing page loaded");
+        function checkStatus() {
+            fetch('/process_status/{{ filename }}')
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Status check response:", data);
+                    if (data.status === 'complete') {
+                        document.getElementById('status').textContent = 'Processing complete!';
+                        document.getElementById('result').innerHTML = `<a href="/processed/${data.filename}" download>Download processed text</a>`;
+                    } else {
+                        setTimeout(checkStatus, 2000);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking status:', error);
+                    document.getElementById('status').textContent = 'An error occurred while processing the PDF.';
+                });
+        }
+        checkStatus();
+    </script>
+</body>
+</html>

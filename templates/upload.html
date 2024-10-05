@@ -18,6 +18,14 @@
         console.log("JavaScript is working");
         document.addEventListener("DOMContentLoaded", function() {
             console.log("DOM fully loaded");
+            
+            // Add event listener for form submission
+            document.querySelector('form').addEventListener('submit', function(e) {
+                console.log("Form submitted");
+                
+                // Display loading message
+                document.querySelector('.container').innerHTML += '<p id="loading">Processing PDF, please wait...</p>';
+            });
         });
     </script>
 </body>
