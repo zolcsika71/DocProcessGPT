@@ -3,11 +3,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def extract_text_from_pdf(file_path):
+def extract_text_from_pdf(file_path, progress_callback=None):
     """
-    Extract text from a PDF file.
+    Extract text from a PDF file with page-by-page progress updates.
     
     :param file_path: Path to the PDF file
+    :param progress_callback: Function to call with progress updates
     :return: Extracted text as a string
     """
     logger.info(f"Starting text extraction from PDF: {file_path}")
@@ -21,9 +22,17 @@ def extract_text_from_pdf(file_path):
             
             for page_num, page in enumerate(pdf_reader.pages, 1):
                 logger.info(f"Extracting text from page {page_num}/{num_pages}")
-                page_text = page.extract_text()
-                text += page_text
-                logger.info(f"Extracted {len(page_text)} characters from page {page_num}")
+                try:
+                    page_text = page.extract_text()
+                    text += page_text
+                    logger.info(f"Extracted {len(page_text)} characters from page {page_num}")
+                    
+                    if progress_callback:
+                        progress = (page_num / num_pages) * 100
+                        progress_callback(progress)
+                except Exception as e:
+                    logger.error(f"Error extracting text from page {page_num}: {str(e)}")
+                    # Continue with the next page
             
             logger.info(f"Text extraction complete. Total characters extracted: {len(text)}")
     except Exception as e:

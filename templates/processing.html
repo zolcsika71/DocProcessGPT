@@ -53,8 +53,8 @@
     <script>
         console.log("Processing page loaded");
         let attempts = 0;
-        const maxAttempts = 120; // 2 minutes timeout (1 second * 120 attempts)
-        const timeoutDuration = 120000; // 2 minutes timeout
+        const maxAttempts = 240; // 4 minutes timeout (1 second * 240 attempts)
+        const timeoutDuration = 240000; // 4 minutes timeout
 
         function updateProgressBar(percentage) {
             const progressBar = document.getElementById('progress-bar');
