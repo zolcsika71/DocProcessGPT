@@ -75,12 +75,23 @@ def process_pdf(filepath, filename):
         app.logger.info(f"Processed text saved: {processed_filepath}")
     except Exception as e:
         app.logger.error(f"Error processing PDF {filename}: {str(e)}")
+        # Update the status file to indicate an error
+        error_filename = f"error_{filename}.txt"
+        error_filepath = os.path.join(app.config['UPLOAD_FOLDER'], error_filename)
+        with open(error_filepath, 'w', encoding='utf-8') as f:
+            f.write(str(e))
 
 @app.route('/process_status/<filename>', methods=['GET'])
 def process_status(filename):
     processed_filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"processed_{filename}.txt")
+    error_filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"error_{filename}.txt")
+    
     if os.path.exists(processed_filepath):
         return jsonify({'status': 'complete', 'filename': f"processed_{filename}.txt"})
+    elif os.path.exists(error_filepath):
+        with open(error_filepath, 'r', encoding='utf-8') as f:
+            error_message = f.read()
+        return jsonify({'status': 'error', 'error': error_message})
     elif os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], filename)):
         return jsonify({'status': 'processing'})
     else:

@@ -14,8 +14,11 @@
     </div>
     <script>
         console.log("Processing page loaded");
+        let attempts = 0;
+        const maxAttempts = 30; // 1 minute timeout (2 seconds * 30 attempts)
+
         function checkStatus() {
-            console.log("Checking status...");
+            console.log("Checking status... Attempt: " + (attempts + 1));
             fetch('/process_status/{{ filename }}')
                 .then(response => {
                     console.log("Status check response received");
@@ -28,8 +31,11 @@
                         document.getElementById('result').innerHTML = `<a href="/processed/${data.filename}" download>Download processed text</a>`;
                     } else if (data.status === 'error') {
                         document.getElementById('status').textContent = `Error: ${data.error}`;
-                    } else {
+                    } else if (attempts < maxAttempts) {
+                        attempts++;
                         setTimeout(checkStatus, 2000);
+                    } else {
+                        document.getElementById('status').textContent = 'Processing timed out. Please try again.';
                     }
                 })
                 .catch(error => {
