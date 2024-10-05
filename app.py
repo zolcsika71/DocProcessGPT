@@ -1,5 +1,6 @@
 import os
 import logging
+import threading
 from flask import Flask, request, jsonify, render_template, send_file, abort, send_from_directory
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
@@ -42,40 +43,48 @@ def upload_file():
             
             app.logger.info(f"File saved: {filepath}")
             
-            # Extract text from PDF
-            raw_text = extract_text_from_pdf(filepath)
+            # Start processing in a background thread
+            threading.Thread(target=process_pdf, args=(filepath, filename)).start()
             
-            app.logger.info(f"Text extracted from PDF, length: {len(raw_text)}")
-            
-            # Preprocess the text
-            processed_text = preprocess_text(raw_text)
-            
-            app.logger.info(f"Text preprocessed, length: {len(processed_text)}")
-            
-            # Save processed text to a file
-            processed_filename = f"processed_{filename}.txt"
-            processed_filepath = os.path.join(app.config['UPLOAD_FOLDER'], processed_filename)
-            with open(processed_filepath, 'w', encoding='utf-8') as f:
-                f.write(processed_text)
-            
-            app.logger.info(f"Processed text saved: {processed_filepath}")
-            
-            # Instead of returning JSON, render a template with the processing status
             return render_template('processing.html', filename=filename)
         else:
             app.logger.error(f"Invalid file format: {file.filename}")
             return jsonify({'error': 'Invalid file format. Please upload a PDF file.'}), 400
     except Exception as e:
         app.logger.error(f"Error in upload_file: {str(e)}")
-        raise
+        return jsonify({'error': str(e)}), 500
+
+def process_pdf(filepath, filename):
+    try:
+        app.logger.info(f"Starting PDF processing for {filename}")
+        
+        # Extract text from PDF
+        raw_text = extract_text_from_pdf(filepath)
+        app.logger.info(f"Text extracted from PDF, length: {len(raw_text)}")
+        
+        # Preprocess the text
+        processed_text = preprocess_text(raw_text)
+        app.logger.info(f"Text preprocessed, length: {len(processed_text)}")
+        
+        # Save processed text to a file
+        processed_filename = f"processed_{filename}.txt"
+        processed_filepath = os.path.join(app.config['UPLOAD_FOLDER'], processed_filename)
+        with open(processed_filepath, 'w', encoding='utf-8') as f:
+            f.write(processed_text)
+        
+        app.logger.info(f"Processed text saved: {processed_filepath}")
+    except Exception as e:
+        app.logger.error(f"Error processing PDF {filename}: {str(e)}")
 
 @app.route('/process_status/<filename>', methods=['GET'])
 def process_status(filename):
     processed_filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"processed_{filename}.txt")
     if os.path.exists(processed_filepath):
         return jsonify({'status': 'complete', 'filename': f"processed_{filename}.txt"})
-    else:
+    elif os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], filename)):
         return jsonify({'status': 'processing'})
+    else:
+        return jsonify({'status': 'error', 'error': 'File not found'})
 
 @app.route('/processing/<filename>')
 def processing(filename):

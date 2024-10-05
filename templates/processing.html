@@ -15,13 +15,19 @@
     <script>
         console.log("Processing page loaded");
         function checkStatus() {
+            console.log("Checking status...");
             fetch('/process_status/{{ filename }}')
-                .then(response => response.json())
+                .then(response => {
+                    console.log("Status check response received");
+                    return response.json();
+                })
                 .then(data => {
                     console.log("Status check response:", data);
                     if (data.status === 'complete') {
                         document.getElementById('status').textContent = 'Processing complete!';
                         document.getElementById('result').innerHTML = `<a href="/processed/${data.filename}" download>Download processed text</a>`;
+                    } else if (data.status === 'error') {
+                        document.getElementById('status').textContent = `Error: ${data.error}`;
                     } else {
                         setTimeout(checkStatus, 2000);
                     }
