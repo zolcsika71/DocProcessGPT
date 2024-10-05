@@ -9,6 +9,7 @@
 <body>
     <div class="container">
         <h1>PDF Processor</h1>
+        <div id="errorMessage" style="color: red; display: none;"></div>
         <form id="uploadForm" action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
             <input type="file" name="file" required>
             <button type="submit">Upload and Process</button>
@@ -23,10 +24,14 @@
             const loadingMessage = document.createElement('p');
             loadingMessage.id = 'loading';
             loadingMessage.textContent = 'Processing PDF, please wait...';
+            const errorMessage = document.getElementById('errorMessage');
             
             form.addEventListener('submit', function(e) {
                 e.preventDefault(); // Prevent default form submission
                 console.log("Form submitted in upload.html");
+                
+                // Hide any previous error messages
+                errorMessage.style.display = 'none';
                 
                 // Display loading message
                 form.appendChild(loadingMessage);
@@ -36,13 +41,22 @@
                     method: 'POST',
                     body: new FormData(form)
                 })
-                .then(response => response.text())
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(errorData => {
+                            throw new Error(errorData.error || 'Unknown error occurred');
+                        });
+                    }
+                    return response.text();
+                })
                 .then(html => {
                     document.body.innerHTML = html;
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    loadingMessage.textContent = 'An error occurred. Please try again.';
+                    errorMessage.textContent = error.message;
+                    errorMessage.style.display = 'block';
+                    loadingMessage.style.display = 'none';
                 });
             });
         });
