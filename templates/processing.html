@@ -31,8 +31,8 @@
     <script>
         console.log("Processing page loaded");
         let attempts = 0;
-        const maxAttempts = 30; // 1 minute timeout (2 seconds * 30 attempts)
-        const timeoutDuration = 60000; // 60 seconds timeout
+        const maxAttempts = 15; // 30 seconds timeout (2 seconds * 15 attempts)
+        const timeoutDuration = 35000; // 35 seconds timeout
 
         function checkStatus() {
             console.log("Checking status... Attempt: " + (attempts + 1));

@@ -2,6 +2,7 @@ import os
 import logging
 import threading
 import mimetypes
+import time
 from flask import Flask, request, jsonify, render_template, send_file, abort, send_from_directory
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
@@ -64,18 +65,22 @@ def process_pdf(filepath, filename):
         file_size = os.path.getsize(filepath)
         app.logger.info(f"File size: {file_size} bytes")
         
+        start_time = time.time()
         app.logger.info("Extracting text from PDF")
         try:
             raw_text = extract_text_from_pdf(filepath)
-            app.logger.info(f"Text extracted from PDF, length: {len(raw_text)}")
+            extraction_time = time.time() - start_time
+            app.logger.info(f"Text extracted from PDF, length: {len(raw_text)}, time taken: {extraction_time:.2f} seconds")
         except Exception as e:
             app.logger.error(f"Error extracting text from PDF: {str(e)}")
             raise
         
+        start_time = time.time()
         app.logger.info("Preprocessing extracted text")
         try:
             processed_text = preprocess_text(raw_text)
-            app.logger.info(f"Text preprocessed, length: {len(processed_text)}")
+            preprocessing_time = time.time() - start_time
+            app.logger.info(f"Text preprocessed, length: {len(processed_text)}, time taken: {preprocessing_time:.2f} seconds")
         except Exception as e:
             app.logger.error(f"Error preprocessing text: {str(e)}")
             raise
@@ -83,10 +88,14 @@ def process_pdf(filepath, filename):
         processed_filename = f"processed_{filename}.txt"
         processed_filepath = os.path.join(app.config['UPLOAD_FOLDER'], processed_filename)
         app.logger.info(f"Saving processed text to: {processed_filepath}")
+        start_time = time.time()
         with open(processed_filepath, 'w', encoding='utf-8') as f:
             f.write(processed_text)
+        saving_time = time.time() - start_time
+        app.logger.info(f"Processed text saved successfully: {processed_filepath}, time taken: {saving_time:.2f} seconds")
         
-        app.logger.info(f"Processed text saved successfully: {processed_filepath}")
+        total_time = extraction_time + preprocessing_time + saving_time
+        app.logger.info(f"Total processing time: {total_time:.2f} seconds")
     except Exception as e:
         app.logger.error(f"Error processing PDF {filename}: {str(e)}")
         error_filename = f"error_{filename}.txt"
