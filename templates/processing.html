@@ -6,33 +6,44 @@
     <title>Processing PDF</title>
     <link rel="stylesheet" href="{{ url_for('serve_static', filename='styles.css') }}">
     <style>
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
+        .progress-container {
+            width: 100%;
+            background-color: #f3f3f3;
+            border-radius: 5px;
+            margin: 20px 0;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .progress-bar {
+            width: 0;
+            height: 30px;
+            background-color: #4CAF50;
+            border-radius: 5px;
+            transition: width 0.5s ease-in-out;
+        }
+        #status-details {
+            margin-top: 20px;
+            font-style: italic;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Processing PDF</h1>
-        <div id="spinner" class="spinner"></div>
+        <div class="progress-container">
+            <div id="progress-bar" class="progress-bar"></div>
+        </div>
         <p id="status">Processing your PDF file, please wait...</p>
+        <p id="status-details"></p>
         <div id="result"></div>
     </div>
     <script>
         console.log("Processing page loaded");
         let attempts = 0;
-        const maxAttempts = 15; // 30 seconds timeout (2 seconds * 15 attempts)
-        const timeoutDuration = 35000; // 35 seconds timeout
+        const maxAttempts = 30; // 60 seconds timeout (2 seconds * 30 attempts)
+        const timeoutDuration = 65000; // 65 seconds timeout
+
+        function updateProgressBar(percentage) {
+            document.getElementById('progress-bar').style.width = percentage + '%';
+        }
 
         function checkStatus() {
             console.log("Checking status... Attempt: " + (attempts + 1));
@@ -44,27 +55,34 @@
                 .then(data => {
                     console.log("Status check response:", data);
                     if (data.status === 'complete') {
-                        document.getElementById('spinner').style.display = 'none';
+                        updateProgressBar(100);
                         document.getElementById('status').textContent = 'Processing complete!';
+                        document.getElementById('status-details').textContent = 'Your PDF has been successfully processed.';
                         document.getElementById('result').innerHTML = `<a href="/processed/${data.filename}" download>Download processed text</a>`;
                     } else if (data.status === 'error') {
-                        document.getElementById('spinner').style.display = 'none';
+                        updateProgressBar(100);
                         document.getElementById('status').textContent = `Error: ${data.error}`;
+                        document.getElementById('status-details').textContent = 'An error occurred during processing.';
                         document.getElementById('result').innerHTML = '<p>Please try uploading the file again.</p>';
                     } else if (attempts < maxAttempts) {
                         attempts++;
-                        document.getElementById('status').textContent = `Processing your PDF file, please wait... (Attempt ${attempts}/${maxAttempts})`;
+                        const progress = (attempts / maxAttempts) * 100;
+                        updateProgressBar(progress);
+                        document.getElementById('status').textContent = `Processing your PDF file, please wait... (${attempts}/${maxAttempts})`;
+                        document.getElementById('status-details').textContent = data.details || 'Extracting and preprocessing text...';
                         setTimeout(checkStatus, 2000);
                     } else {
-                        document.getElementById('spinner').style.display = 'none';
+                        updateProgressBar(100);
                         document.getElementById('status').textContent = 'Processing timed out. Please try again.';
-                        document.getElementById('result').innerHTML = '<p>The process took too long. Please try uploading the file again.</p>';
+                        document.getElementById('status-details').textContent = 'The process took too long to complete.';
+                        document.getElementById('result').innerHTML = '<p>Please try uploading the file again.</p>';
                     }
                 })
                 .catch(error => {
                     console.error('Error checking status:', error);
-                    document.getElementById('spinner').style.display = 'none';
+                    updateProgressBar(100);
                     document.getElementById('status').textContent = 'An error occurred while processing the PDF.';
+                    document.getElementById('status-details').textContent = 'There was a problem communicating with the server.';
                     document.getElementById('result').innerHTML = '<p>Please try uploading the file again.</p>';
                 });
         }
@@ -75,9 +93,10 @@
         // Set a timeout for the entire process
         setTimeout(() => {
             if (document.getElementById('status').textContent.includes('Processing')) {
-                document.getElementById('spinner').style.display = 'none';
+                updateProgressBar(100);
                 document.getElementById('status').textContent = 'Processing timed out. Please try again.';
-                document.getElementById('result').innerHTML = '<p>The process took too long. Please try uploading the file again.</p>';
+                document.getElementById('status-details').textContent = 'The process took too long to complete.';
+                document.getElementById('result').innerHTML = '<p>Please try uploading the file again.</p>';
             }
         }, timeoutDuration);
     </script>
