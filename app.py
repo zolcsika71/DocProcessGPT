@@ -58,43 +58,52 @@ def process_pdf(filepath, filename):
     try:
         app.logger.info(f"Starting PDF processing for {filename}")
         
-        # Extract text from PDF
+        app.logger.info(f"Reading file: {filepath}")
+        with open(filepath, 'rb') as file:
+            app.logger.info(f"File opened successfully: {filepath}")
+        
+        app.logger.info("Extracting text from PDF")
         raw_text = extract_text_from_pdf(filepath)
         app.logger.info(f"Text extracted from PDF, length: {len(raw_text)}")
         
-        # Preprocess the text
+        app.logger.info("Preprocessing extracted text")
         processed_text = preprocess_text(raw_text)
         app.logger.info(f"Text preprocessed, length: {len(processed_text)}")
         
-        # Save processed text to a file
         processed_filename = f"processed_{filename}.txt"
         processed_filepath = os.path.join(app.config['UPLOAD_FOLDER'], processed_filename)
+        app.logger.info(f"Saving processed text to: {processed_filepath}")
         with open(processed_filepath, 'w', encoding='utf-8') as f:
             f.write(processed_text)
         
-        app.logger.info(f"Processed text saved: {processed_filepath}")
+        app.logger.info(f"Processed text saved successfully: {processed_filepath}")
     except Exception as e:
         app.logger.error(f"Error processing PDF {filename}: {str(e)}")
-        # Update the status file to indicate an error
         error_filename = f"error_{filename}.txt"
         error_filepath = os.path.join(app.config['UPLOAD_FOLDER'], error_filename)
         with open(error_filepath, 'w', encoding='utf-8') as f:
             f.write(str(e))
+        app.logger.error(f"Error details saved to: {error_filepath}")
 
 @app.route('/process_status/<filename>', methods=['GET'])
 def process_status(filename):
+    app.logger.info(f"Checking process status for: {filename}")
     processed_filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"processed_{filename}.txt")
     error_filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"error_{filename}.txt")
     
     if os.path.exists(processed_filepath):
+        app.logger.info(f"Processing complete for: {filename}")
         return jsonify({'status': 'complete', 'filename': f"processed_{filename}.txt"})
     elif os.path.exists(error_filepath):
+        app.logger.error(f"Error occurred during processing: {filename}")
         with open(error_filepath, 'r', encoding='utf-8') as f:
             error_message = f.read()
         return jsonify({'status': 'error', 'error': error_message})
     elif os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], filename)):
+        app.logger.info(f"Processing still in progress for: {filename}")
         return jsonify({'status': 'processing'})
     else:
+        app.logger.error(f"File not found: {filename}")
         return jsonify({'status': 'error', 'error': 'File not found'})
 
 @app.route('/processing/<filename>')

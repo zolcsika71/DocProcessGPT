@@ -16,6 +16,7 @@
         console.log("Processing page loaded");
         let attempts = 0;
         const maxAttempts = 30; // 1 minute timeout (2 seconds * 30 attempts)
+        const timeoutDuration = 60000; // 60 seconds timeout
 
         function checkStatus() {
             console.log("Checking status... Attempt: " + (attempts + 1));
@@ -43,7 +44,16 @@
                     document.getElementById('status').textContent = 'An error occurred while processing the PDF.';
                 });
         }
+
+        // Start the status check
         checkStatus();
+
+        // Set a timeout for the entire process
+        setTimeout(() => {
+            if (document.getElementById('status').textContent.includes('Processing')) {
+                document.getElementById('status').textContent = 'Processing timed out. Please try again.';
+            }
+        }, timeoutDuration);
     </script>
 </body>
 </html>
