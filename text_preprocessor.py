@@ -25,16 +25,21 @@ fallback_stopwords = set(['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourse
 
 def preprocess_text(text):
     try:
+        logger.info("Starting text preprocessing")
+        
         # Tokenize the text
+        logger.info("Tokenizing text")
         tokens = word_tokenize(text.lower())
         logger.info(f"Text tokenized successfully: {len(tokens)} tokens")
         
         # Remove stopwords
+        logger.info("Removing stopwords")
         stop_words = set(stopwords.words('english'))
         filtered_tokens = [token for token in tokens if token not in stop_words]
         logger.info(f"Stopwords removed: {len(tokens) - len(filtered_tokens)} stopwords")
         
         # Join the tokens back into a string
+        logger.info("Joining tokens back into a string")
         preprocessed_text = ' '.join(filtered_tokens)
         
         logger.info(f"Preprocessing complete: {len(preprocessed_text)} characters in preprocessed text")
@@ -50,6 +55,7 @@ def preprocess_text(text):
             logger.error("NLTK 'stopwords' resource is missing. Please download it using nltk.download('stopwords')")
         
         # Fallback tokenization and stopwords removal
+        logger.info("Starting fallback preprocessing")
         tokens = fallback_tokenize(text)
         logger.info(f"Fallback tokenization complete: {len(tokens)} tokens")
         filtered_tokens = [token for token in tokens if token not in fallback_stopwords]
