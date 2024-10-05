@@ -1,5 +1,6 @@
 import os
 import logging
+from logging.handlers import RotatingFileHandler
 import threading
 import mimetypes
 import time
@@ -10,7 +11,14 @@ from pdf_processor import extract_text_from_pdf
 from text_preprocessor import preprocess_text
 
 app = Flask(__name__)
-logging.basicConfig(level=logging.DEBUG)
+
+# Set up file-based logging
+log_file = 'app.log'
+file_handler = RotatingFileHandler(log_file, maxBytes=10240, backupCount=10)
+file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
+file_handler.setLevel(logging.INFO)
+app.logger.addHandler(file_handler)
+app.logger.setLevel(logging.INFO)
 
 app.config['UPLOAD_FOLDER'] = '/tmp'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
@@ -174,6 +182,15 @@ def get_processed_text(filename):
         return send_file(filepath, as_attachment=True)
     else:
         return jsonify({'error': 'File not found'}), 404
+
+@app.route('/view_logs')
+def view_logs():
+    try:
+        with open('app.log', 'r') as log_file:
+            logs = log_file.read()
+        return render_template('view_logs.html', logs=logs)
+    except Exception as e:
+        return f'Error reading log file: {str(e)}'
 
 @app.errorhandler(500)
 def internal_server_error(e):
