@@ -70,6 +70,20 @@
             overflow: hidden;
             background-color: #f1f1f1;
         }
+        #processing-summary {
+            background-color: #f0f8ff;
+            border: 1px solid #b0d4ff;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        #processing-summary h2 {
+            color: #0066cc;
+            margin-top: 0;
+        }
+        #processing-summary p {
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
@@ -111,12 +125,12 @@
             const summary = document.getElementById('processing-summary');
             summary.innerHTML = `
                 <h2>Processing Summary</h2>
-                <p>Original file size: ${data.file_size} bytes</p>
-                <p>Extracted text length: ${data.extracted_length} characters</p>
-                <p>Processed text length: ${data.processed_length} characters</p>
-                <p>Text extraction time: ${data.extraction_time.toFixed(3)} seconds</p>
-                <p>Text preprocessing time: ${data.preprocessing_time.toFixed(3)} seconds</p>
-                <p>Total processing time: ${data.total_time.toFixed(3)} seconds</p>
+                <p><strong>Original file size:</strong> ${(data.file_size / 1024).toFixed(2)} KB</p>
+                <p><strong>Extracted text length:</strong> ${data.extracted_length} characters</p>
+                <p><strong>Processed text length:</strong> ${data.processed_length} characters</p>
+                <p><strong>Text extraction time:</strong> ${data.extraction_time.toFixed(3)} seconds</p>
+                <p><strong>Text preprocessing time:</strong> ${data.preprocessing_time.toFixed(3)} seconds</p>
+                <p><strong>Total processing time:</strong> ${data.total_time.toFixed(3)} seconds</p>
             `;
         }
 
