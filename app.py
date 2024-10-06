@@ -4,7 +4,7 @@ from logging.handlers import RotatingFileHandler
 import threading
 import mimetypes
 import time
-from flask import Flask, request, jsonify, render_template, send_file, abort, send_from_directory
+from flask import Flask, request, jsonify, render_template, send_file, abort, send_from_directory, current_app
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
 from pdf_processor import extract_text_from_pdf
@@ -82,86 +82,87 @@ def update_progress(filename, start_progress, end_progress, current_progress):
     app.logger.info(f"Processing progress for {filename}: {progress:.2f}%")
 
 def process_pdf(filepath, filename):
-    def timeout_handler():
-        app.logger.error(f"PDF processing timed out after {PROCESSING_TIMEOUT} seconds for {filename}")
-        processing_status[filename] = {'status': 'error', 'progress': 100, 'details': f'PDF processing timed out after {PROCESSING_TIMEOUT} seconds'}
+    with app.app_context():
+        def timeout_handler():
+            app.logger.error(f"PDF processing timed out after {PROCESSING_TIMEOUT} seconds for {filename}")
+            processing_status[filename] = {'status': 'error', 'progress': 100, 'details': f'PDF processing timed out after {PROCESSING_TIMEOUT} seconds'}
 
-    timer = threading.Timer(PROCESSING_TIMEOUT, timeout_handler)
-    timer.start()
+        timer = threading.Timer(PROCESSING_TIMEOUT, timeout_handler)
+        timer.start()
 
-    try:
-        app.logger.info(f"Starting PDF processing for {filename}")
-        file_size = os.path.getsize(filepath)
-        app.logger.info(f"File size: {file_size} bytes")
-        
-        # File reading
-        processing_status[filename] = {'status': 'processing', 'progress': 5, 'details': 'Reading PDF file...'}
         try:
-            with open(filepath, 'rb') as file:
-                app.logger.info(f"File opened successfully: {filepath}")
-        except IOError as e:
-            error_msg = f"Error opening file: {str(e)}"
-            app.logger.error(error_msg)
-            processing_status[filename] = {'status': 'error', 'progress': 100, 'details': error_msg}
-            return
-        
-        # Text extraction
-        processing_status[filename] = {'status': 'processing', 'progress': 20, 'details': 'Extracting text from PDF...'}
-        start_time = time.time()
-        app.logger.info("Extracting text from PDF")
-        try:
-            raw_text = extract_text_from_pdf(filepath, lambda progress: update_progress(filename, 20, 50, progress))
-            extraction_time = time.time() - start_time
-            app.logger.info(f"Text extracted from PDF, length: {len(raw_text)}, time taken: {extraction_time:.2f} seconds")
-            processing_status[filename] = {'status': 'processing', 'progress': 50, 'details': f'Text extracted, length: {len(raw_text)} characters'}
+            app.logger.info(f"Starting PDF processing for {filename}")
+            file_size = os.path.getsize(filepath)
+            app.logger.info(f"File size: {file_size} bytes")
+            
+            # File reading
+            processing_status[filename] = {'status': 'processing', 'progress': 5, 'details': 'Reading PDF file...'}
+            try:
+                with open(filepath, 'rb') as file:
+                    app.logger.info(f"File opened successfully: {filepath}")
+            except IOError as e:
+                error_msg = f"Error opening file: {str(e)}"
+                app.logger.error(error_msg)
+                processing_status[filename] = {'status': 'error', 'progress': 100, 'details': error_msg}
+                return
+            
+            # Text extraction
+            processing_status[filename] = {'status': 'processing', 'progress': 20, 'details': 'Extracting text from PDF...'}
+            start_time = time.time()
+            app.logger.info("Extracting text from PDF")
+            try:
+                raw_text = extract_text_from_pdf(filepath, lambda progress: update_progress(filename, 20, 50, progress), current_app)
+                extraction_time = time.time() - start_time
+                app.logger.info(f"Text extracted from PDF, length: {len(raw_text)}, time taken: {extraction_time:.2f} seconds")
+                processing_status[filename] = {'status': 'processing', 'progress': 50, 'details': f'Text extracted, length: {len(raw_text)} characters'}
+            except Exception as e:
+                error_msg = f"Error extracting text from PDF: {str(e)}"
+                app.logger.error(error_msg)
+                processing_status[filename] = {'status': 'error', 'progress': 100, 'details': error_msg}
+                return
+            
+            # Text preprocessing
+            processing_status[filename] = {'status': 'processing', 'progress': 60, 'details': 'Preprocessing extracted text...'}
+            start_time = time.time()
+            app.logger.info("Preprocessing extracted text")
+            try:
+                processed_text = preprocess_text(raw_text, lambda progress: update_progress(filename, 60, 90, progress))
+                preprocessing_time = time.time() - start_time
+                app.logger.info(f"Text preprocessed, length: {len(processed_text)}, time taken: {preprocessing_time:.2f} seconds")
+                processing_status[filename] = {'status': 'processing', 'progress': 80, 'details': f'Text preprocessed, length: {len(processed_text)} characters'}
+            except Exception as e:
+                error_msg = f"Error preprocessing text: {str(e)}"
+                app.logger.error(error_msg)
+                processing_status[filename] = {'status': 'error', 'progress': 100, 'details': error_msg}
+                return
+            
+            # Saving processed text
+            processing_status[filename] = {'status': 'processing', 'progress': 90, 'details': 'Saving processed text...'}
+            processed_filename = f"processed_{filename}.txt"
+            processed_filepath = os.path.join(app.config['UPLOAD_FOLDER'], processed_filename)
+            app.logger.info(f"Saving processed text to: {processed_filepath}")
+            start_time = time.time()
+            try:
+                with open(processed_filepath, 'w', encoding='utf-8') as f:
+                    f.write(processed_text)
+                saving_time = time.time() - start_time
+                app.logger.info(f"Processed text saved successfully: {processed_filepath}, time taken: {saving_time:.2f} seconds")
+            except IOError as e:
+                error_msg = f"Error saving processed text: {str(e)}"
+                app.logger.error(error_msg)
+                processing_status[filename] = {'status': 'error', 'progress': 100, 'details': error_msg}
+                return
+            
+            total_time = extraction_time + preprocessing_time + saving_time
+            app.logger.info(f"Total processing time: {total_time:.2f} seconds")
+            
+            processing_status[filename] = {'status': 'complete', 'progress': 100, 'filename': processed_filename, 'details': f'Processing completed in {total_time:.2f} seconds'}
         except Exception as e:
-            error_msg = f"Error extracting text from PDF: {str(e)}"
+            error_msg = f"Unexpected error processing PDF {filename}: {str(e)}"
             app.logger.error(error_msg)
             processing_status[filename] = {'status': 'error', 'progress': 100, 'details': error_msg}
-            return
-        
-        # Text preprocessing
-        processing_status[filename] = {'status': 'processing', 'progress': 60, 'details': 'Preprocessing extracted text...'}
-        start_time = time.time()
-        app.logger.info("Preprocessing extracted text")
-        try:
-            processed_text = preprocess_text(raw_text, lambda progress: update_progress(filename, 60, 90, progress))
-            preprocessing_time = time.time() - start_time
-            app.logger.info(f"Text preprocessed, length: {len(processed_text)}, time taken: {preprocessing_time:.2f} seconds")
-            processing_status[filename] = {'status': 'processing', 'progress': 80, 'details': f'Text preprocessed, length: {len(processed_text)} characters'}
-        except Exception as e:
-            error_msg = f"Error preprocessing text: {str(e)}"
-            app.logger.error(error_msg)
-            processing_status[filename] = {'status': 'error', 'progress': 100, 'details': error_msg}
-            return
-        
-        # Saving processed text
-        processing_status[filename] = {'status': 'processing', 'progress': 90, 'details': 'Saving processed text...'}
-        processed_filename = f"processed_{filename}.txt"
-        processed_filepath = os.path.join(app.config['UPLOAD_FOLDER'], processed_filename)
-        app.logger.info(f"Saving processed text to: {processed_filepath}")
-        start_time = time.time()
-        try:
-            with open(processed_filepath, 'w', encoding='utf-8') as f:
-                f.write(processed_text)
-            saving_time = time.time() - start_time
-            app.logger.info(f"Processed text saved successfully: {processed_filepath}, time taken: {saving_time:.2f} seconds")
-        except IOError as e:
-            error_msg = f"Error saving processed text: {str(e)}"
-            app.logger.error(error_msg)
-            processing_status[filename] = {'status': 'error', 'progress': 100, 'details': error_msg}
-            return
-        
-        total_time = extraction_time + preprocessing_time + saving_time
-        app.logger.info(f"Total processing time: {total_time:.2f} seconds")
-        
-        processing_status[filename] = {'status': 'complete', 'progress': 100, 'filename': processed_filename, 'details': f'Processing completed in {total_time:.2f} seconds'}
-    except Exception as e:
-        error_msg = f"Unexpected error processing PDF {filename}: {str(e)}"
-        app.logger.error(error_msg)
-        processing_status[filename] = {'status': 'error', 'progress': 100, 'details': error_msg}
-    finally:
-        timer.cancel()
+        finally:
+            timer.cancel()
 
 @app.route('/process_status/<filename>', methods=['GET'])
 def process_status(filename):

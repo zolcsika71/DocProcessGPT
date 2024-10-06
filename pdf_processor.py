@@ -3,14 +3,20 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def extract_text_from_pdf(file_path, progress_callback=None):
+def extract_text_from_pdf(file_path, progress_callback=None, flask_app=None):
     """
     Extract text from a PDF file with page-by-page progress updates and error handling.
     
     :param file_path: Path to the PDF file
     :param progress_callback: Function to call with progress updates
+    :param flask_app: Flask application instance for logging
     :return: Extracted text as a string
     """
+    if flask_app:
+        logger = flask_app.logger
+    else:
+        logger = logging.getLogger(__name__)
+
     logger.info(f"Starting text extraction from PDF: {file_path}")
     text = ""
     try:
