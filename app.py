@@ -1,6 +1,8 @@
 import os
 import logging
 from logging import Formatter
+from logging.config import dictConfig
+from colorlog import ColoredFormatter
 import threading
 import mimetypes
 import time
@@ -20,6 +22,7 @@ from werkzeug.exceptions import HTTPException
 from pdf_processor import extract_text_from_pdf
 from text_preprocessor import preprocess_text
 import nltk
+from logging_config import setup_logging
 
 app = Flask(__name__)
 
@@ -27,6 +30,8 @@ app = Flask(__name__)
 log_directory = "logs"
 if not os.path.exists(log_directory):
     os.makedirs(log_directory)
+
+setup_logging()
 
 
 def delete_old_logs():
