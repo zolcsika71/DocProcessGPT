@@ -13,3 +13,16 @@ the current application. To solve this, set up an application context
 with app.app_context(). See the documentation for more information. [in /home/runner/DocProcessGPT/app.py:118]
 2024-10-06 00:01:02,605 INFO: Rendering index page [in /home/runner/DocProcessGPT/app.py:35]
 2024-10-06 00:01:02,762 INFO: Rendering index page [in /home/runner/DocProcessGPT/app.py:35]
+2024-10-06 00:01:14,657 INFO: Rendering index page [in /home/runner/DocProcessGPT/app.py:35]
+2024-10-06 00:01:32,023 INFO: File saved: /tmp/cli-cheat-sheet.pdf [in /home/runner/DocProcessGPT/app.py:66]
+2024-10-06 00:01:32,027 INFO: Starting PDF processing for cli-cheat-sheet.pdf [in /home/runner/DocProcessGPT/app.py:93]
+2024-10-06 00:01:32,028 INFO: File size: 411874 bytes [in /home/runner/DocProcessGPT/app.py:95]
+2024-10-06 00:01:32,028 INFO: File opened successfully: /tmp/cli-cheat-sheet.pdf [in /home/runner/DocProcessGPT/app.py:101]
+2024-10-06 00:01:32,028 INFO: Extracting text from PDF [in /home/runner/DocProcessGPT/app.py:111]
+2024-10-06 00:01:32,028 ERROR: Error extracting text from PDF: Working outside of application context.
+
+This typically means that you attempted to use functionality that needed
+the current application. To solve this, set up an application context
+with app.app_context(). See the documentation for more information. [in /home/runner/DocProcessGPT/app.py:119]
+2024-10-06 00:03:40,305 INFO: Rendering index page [in /home/runner/DocProcessGPT/app.py:35]
+2024-10-06 00:03:46,189 INFO: Rendering index page [in /home/runner/DocProcessGPT/app.py:35]
