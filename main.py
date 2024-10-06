@@ -1,5 +1,6 @@
 import sys
 import os
+from app import app
 
 print(f"Python version: {sys.version}")
 print(f"Current working directory: {os.getcwd()}")
@@ -7,7 +8,7 @@ print(f"PYTHONPATH: {os.environ.get('PYTHONPATH', 'Not set')}")
 print(f"Contents of current directory: {os.listdir('.')}")
 
 
-from app import app
+
 
 if __name__ == "__main__":
     print("About to start Flask app...")
