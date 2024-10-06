@@ -434,5 +434,4 @@ def handle_exception(e):
 
 if __name__ == "__main__":
     download_nltk_resources()
-    app.run(host="0.0.0.0", port=5000, debug=True)
-
+    app.run(host="0.0.0.0", port=5001, debug=True)
