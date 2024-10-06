@@ -45,6 +45,9 @@ file_handler.setLevel(logging.INFO)
 app.logger.addHandler(file_handler)
 app.logger.setLevel(logging.INFO)
 
+# Add a log entry at the beginning of the app to verify the UTC time
+app.logger.info(f"Application started. Current UTC time: {datetime.now(timezone.utc).strftime('%m-%d %H:%M:%S')}")
+
 app.config['UPLOAD_FOLDER'] = '/tmp'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
