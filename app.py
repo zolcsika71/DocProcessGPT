@@ -182,11 +182,16 @@ def process_pdf(filepath, filename):
                 'progress': 100,
                 'filename': processed_filename,
                 'details': f'Processing completed in {total_time:.3f} seconds',
+                'file_size': file_size,
                 'extracted_length': len(raw_text),
                 'processed_length': len(processed_text),
                 'extraction_time': extraction_time,
                 'preprocessing_time': preprocessing_time,
-                'saving_time': saving_time
+                'saving_time': saving_time,
+                'nltk_loading_time': nltk_loading_time,
+                'total_time': total_time,
+                'file_path': filepath,
+                'processed_file_path': processed_filepath
             }
         except Exception as e:
             error_msg = f"Unexpected error processing PDF {filename}: {str(e)}"

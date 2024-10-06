@@ -46,9 +46,29 @@
             padding: 10px;
             font-family: monospace;
         }
-        #processing-details {
+        #processing-summary, #processing-details {
             margin-top: 20px;
             font-size: 14px;
+        }
+        .collapsible {
+            background-color: #eee;
+            color: #444;
+            cursor: pointer;
+            padding: 18px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 15px;
+        }
+        .active, .collapsible:hover {
+            background-color: #ccc;
+        }
+        .content {
+            padding: 0 18px;
+            display: none;
+            overflow: hidden;
+            background-color: #f1f1f1;
         }
     </style>
 </head>
@@ -60,9 +80,14 @@
         </div>
         <p id="status">Processing your PDF file, please wait...</p>
         <p id="status-details"></p>
-        <div id="processing-details"></div>
+        <div id="processing-summary"></div>
+        <button type="button" class="collapsible">Processing Details</button>
+        <div class="content">
+            <div id="processing-details"></div>
+        </div>
         <div id="result"></div>
         <button id="try-again-btn" class="try-again-btn" onclick="location.reload();">Try Again</button>
+        <h2>Real-time Logs</h2>
         <div id="log-container"></div>
     </div>
     <script>
@@ -82,17 +107,28 @@
             document.getElementById('try-again-btn').style.display = 'inline-block';
         }
 
+        function updateProcessingSummary(data) {
+            const summary = document.getElementById('processing-summary');
+            summary.innerHTML = `
+                <h2>Processing Summary</h2>
+                <p>Original file size: ${data.file_size} bytes</p>
+                <p>Extracted text length: ${data.extracted_length} characters</p>
+                <p>Processed text length: ${data.processed_length} characters</p>
+                <p>Text extraction time: ${data.extraction_time.toFixed(3)} seconds</p>
+                <p>Text preprocessing time: ${data.preprocessing_time.toFixed(3)} seconds</p>
+                <p>Total processing time: ${data.total_time.toFixed(3)} seconds</p>
+            `;
+        }
+
         function updateProcessingDetails(data) {
             const details = document.getElementById('processing-details');
-            if (data.extracted_length !== undefined) {
-                details.innerHTML = `
-                    <p>Extracted text length: ${data.extracted_length} characters</p>
-                    <p>Processed text length: ${data.processed_length} characters</p>
-                    <p>Extraction time: ${data.extraction_time.toFixed(3)} seconds</p>
-                    <p>Preprocessing time: ${data.preprocessing_time.toFixed(3)} seconds</p>
-                    <p>Saving time: ${data.saving_time.toFixed(3)} seconds</p>
-                `;
-            }
+            details.innerHTML = `
+                <h3>Technical Details</h3>
+                <p>NLTK loading time: ${data.nltk_loading_time.toFixed(3)} seconds</p>
+                <p>Saving time: ${data.saving_time.toFixed(3)} seconds</p>
+                <p>File path: ${data.file_path}</p>
+                <p>Processed file path: ${data.processed_file_path}</p>
+            `;
         }
 
         function checkStatus() {
@@ -108,6 +144,7 @@
                         updateProgressBar(100);
                         document.getElementById('status').textContent = 'Processing complete!';
                         document.getElementById('status-details').textContent = data.details;
+                        updateProcessingSummary(data);
                         updateProcessingDetails(data);
                         document.getElementById('result').innerHTML = `<a href="/processed/${data.filename}" download>Download processed text</a>`;
                     } else if (data.status === 'error') {
@@ -157,6 +194,22 @@
                 document.getElementById('status-details').textContent = 'The process took too long to complete.';
             }
         }, timeoutDuration);
+
+        // Collapsible functionality
+        var coll = document.getElementsByClassName("collapsible");
+        var i;
+
+        for (i = 0; i < coll.length; i++) {
+            coll[i].addEventListener("click", function() {
+                this.classList.toggle("active");
+                var content = this.nextElementSibling;
+                if (content.style.display === "block") {
+                    content.style.display = "none";
+                } else {
+                    content.style.display = "block";
+                }
+            });
+        }
     </script>
 </body>
 </html>
