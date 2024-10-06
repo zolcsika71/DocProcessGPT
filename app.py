@@ -23,6 +23,7 @@ from pdf_processor import extract_text_from_pdf
 from text_preprocessor import preprocess_text
 import nltk
 from logging_config import setup_logging
+from time_utils import get_current_utc_time, format_time
 
 app = Flask(__name__)
 
@@ -32,6 +33,11 @@ if not os.path.exists(log_directory):
     os.makedirs(log_directory)
 
 setup_logging()
+
+
+def calculate_processing_time(start_time):
+    """Calculate the elapsed time since start_time."""
+    return time.perf_counter() - start_time
 
 
 def delete_old_logs():
@@ -58,12 +64,11 @@ file_handler = logging.FileHandler(log_file)
 
 class UTCFormatter(Formatter):
     def formatTime(self, record, datefmt=None):
-        dt = datetime.fromtimestamp(record.created, timezone.utc)
-        if datefmt:
-            return dt.strftime(datefmt)
-        return dt.isoformat()
+        return format_time(record.created, datefmt)
 
 
+# Use the utility function for logging the start time
+app.logger.info(f"Application started. Current UTC time: {get_current_utc_time()}")
 file_handler.setFormatter(
     UTCFormatter(
         "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]",
@@ -198,7 +203,7 @@ def process_pdf(filepath, filename):
             update_progress(filename, 5, "Loading NLTK resources...")
             start_time = time.perf_counter()
             download_nltk_resources()
-            nltk_loading_time = time.perf_counter() - start_time
+            nltk_loading_time = calculate_processing_time(start_time)
             update_progress(
                 filename,
                 10,
@@ -234,7 +239,7 @@ def process_pdf(filepath, filename):
                     ),
                     current_app,
                 )
-                extraction_time = time.perf_counter() - start_time
+                extraction_time = calculate_processing_time(start_time)
                 app.logger.info(
                     f"Text extracted from PDF, length: {len(raw_text)}, time taken: {extraction_time:.3f} seconds"
                 )
@@ -266,7 +271,7 @@ def process_pdf(filepath, filename):
                         f"Preprocessing text: {progress:.1f}% complete",
                     ),
                 )
-                preprocessing_time = time.perf_counter() - start_time
+                preprocessing_time = calculate_processing_time(start_time)
                 app.logger.info(
                     f"Text preprocessed, length: {len(processed_text)}, time taken: {preprocessing_time:.3f} seconds"
                 )
@@ -296,7 +301,7 @@ def process_pdf(filepath, filename):
             try:
                 with open(processed_filepath, "w", encoding="utf-8") as f:
                     f.write(processed_text)
-                saving_time = time.perf_counter() - start_time
+                saving_time = calculate_processing_time(start_time)
                 app.logger.info(
                     f"Processed text saved successfully: {processed_filepath}, time taken: {saving_time:.3f} seconds"
                 )
