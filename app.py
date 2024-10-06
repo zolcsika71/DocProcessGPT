@@ -27,7 +27,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 processing_status = {}
 
 # Timeout for PDF processing (in seconds)
-PROCESSING_TIMEOUT = 240  # Increased to 4 minutes
+PROCESSING_TIMEOUT = 300  # Increased to 5 minutes
 
 @app.route('/', methods=['GET'])
 def index():
@@ -83,6 +83,7 @@ def update_progress(filename, start_progress, end_progress, current_progress):
 
 def process_pdf(filepath, filename):
     def timeout_handler():
+        app.logger.error(f"PDF processing timed out after {PROCESSING_TIMEOUT} seconds for {filename}")
         processing_status[filename] = {'status': 'error', 'progress': 100, 'details': f'PDF processing timed out after {PROCESSING_TIMEOUT} seconds'}
 
     timer = threading.Timer(PROCESSING_TIMEOUT, timeout_handler)
@@ -191,6 +192,16 @@ def view_logs():
         return render_template('view_logs.html', logs=logs)
     except Exception as e:
         return f'Error reading log file: {str(e)}'
+
+@app.route('/latest_logs')
+def latest_logs():
+    try:
+        with open('app.log', 'r') as log_file:
+            logs = log_file.readlines()[-50:]  # Get the last 50 lines
+        return jsonify({'logs': logs})
+    except Exception as e:
+        app.logger.error(f"Error fetching latest logs: {str(e)}")
+        return jsonify({'error': 'Error fetching latest logs'}), 500
 
 @app.errorhandler(500)
 def internal_server_error(e):

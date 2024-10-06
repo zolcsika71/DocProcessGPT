@@ -37,6 +37,15 @@
             border-radius: 5px;
             cursor: pointer;
         }
+        #log-container {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 10px;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
@@ -49,12 +58,13 @@
         <p id="status-details"></p>
         <div id="result"></div>
         <button id="try-again-btn" class="try-again-btn" onclick="location.reload();">Try Again</button>
+        <div id="log-container"></div>
     </div>
     <script>
         console.log("Processing page loaded");
         let attempts = 0;
-        const maxAttempts = 240; // 4 minutes timeout (1 second * 240 attempts)
-        const timeoutDuration = 240000; // 4 minutes timeout
+        const maxAttempts = 360; // 6 minutes timeout (1 second * 360 attempts)
+        const timeoutDuration = 360000; // 6 minutes timeout
 
         function updateProgressBar(percentage) {
             const progressBar = document.getElementById('progress-bar');
@@ -105,8 +115,20 @@
                 });
         }
 
-        // Start the status check
+        function fetchLatestLogs() {
+            fetch('/latest_logs')
+                .then(response => response.json())
+                .then(data => {
+                    const logContainer = document.getElementById('log-container');
+                    logContainer.innerHTML = data.logs.join('<br>');
+                    logContainer.scrollTop = logContainer.scrollHeight;
+                })
+                .catch(error => console.error('Error fetching logs:', error));
+        }
+
+        // Start the status check and log fetching
         checkStatus();
+        setInterval(fetchLatestLogs, 5000); // Fetch logs every 5 seconds
 
         // Set a timeout for the entire process
         setTimeout(() => {

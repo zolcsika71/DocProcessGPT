@@ -3,7 +3,7 @@ from flask import current_app
 
 def extract_text_from_pdf(file_path, progress_callback=None):
     """
-    Extract text from a PDF file with page-by-page progress updates.
+    Extract text from a PDF file with page-by-page progress updates and error handling.
     
     :param file_path: Path to the PDF file
     :param progress_callback: Function to call with progress updates
@@ -28,9 +28,14 @@ def extract_text_from_pdf(file_path, progress_callback=None):
                     if progress_callback:
                         progress = (page_num / num_pages) * 100
                         progress_callback(progress)
+                        
+                    # Add more granular progress updates
+                    if page_num % 5 == 0 or page_num == num_pages:
+                        current_app.logger.info(f"Extraction progress: {progress:.2f}% ({page_num}/{num_pages} pages)")
                 except Exception as e:
                     current_app.logger.error(f"Error extracting text from page {page_num}: {str(e)}")
-                    # Continue with the next page
+                    # Continue with the next page, but log the error
+                    current_app.logger.warning(f"Skipping page {page_num} due to extraction error")
             
             current_app.logger.info(f"Text extraction complete. Total characters extracted: {len(text)}")
     except Exception as e:
