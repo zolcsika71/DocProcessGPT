@@ -1,6 +1,6 @@
 import os
 import logging
-from logging.handlers import RotatingFileHandler
+from logging import Formatter
 import threading
 import mimetypes
 import time
@@ -31,8 +31,9 @@ delete_old_logs()
 
 current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 log_file = os.path.join(log_directory, f'app_{current_time}.log')
-file_handler = RotatingFileHandler(log_file, maxBytes=10240, backupCount=5)
-file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
+file_handler = logging.FileHandler(log_file)
+file_handler.setFormatter(Formatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]', '%Y-%m-%d %H:%M:%S'))
+file_handler.formatter.converter = time.gmtime
 file_handler.setLevel(logging.INFO)
 app.logger.addHandler(file_handler)
 app.logger.setLevel(logging.INFO)
