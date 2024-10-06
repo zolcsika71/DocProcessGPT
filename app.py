@@ -5,6 +5,7 @@ import threading
 import mimetypes
 import time
 from datetime import datetime
+import pytz
 from flask import Flask, request, jsonify, render_template, send_file, abort, send_from_directory, current_app
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
@@ -32,8 +33,8 @@ delete_old_logs()
 current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 log_file = os.path.join(log_directory, f'app_{current_time}.log')
 file_handler = logging.FileHandler(log_file)
-file_handler.setFormatter(Formatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]', '%Y-%m-%d %H:%M:%S'))
-file_handler.formatter.converter = time.gmtime
+file_handler.setFormatter(Formatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]', '%m-%d %H:%M:%S'))
+file_handler.formatter.converter = lambda *args: datetime.now(pytz.utc).timetuple()
 file_handler.setLevel(logging.INFO)
 app.logger.addHandler(file_handler)
 app.logger.setLevel(logging.INFO)

@@ -549,6 +549,17 @@ full = ["Pillow", "PyCryptodome"]
 image = ["Pillow"]
 
 [[package]]
+name = "pytz"
+version = "2024.2"
+description = "World timezone definitions, modern and historical"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pytz-2024.2-py2.py3-none-any.whl", hash = "sha256:31c7c1817eb7fae7ca4b8c7ee50c72f93aa2dd863de768e1ef4245d426aa0725"},
+    {file = "pytz-2024.2.tar.gz", hash = "sha256:2aa355083c50a0f93fa581709deac0c9ad65cca8a9e9beac660adcbd493c798a"},
+]
+
+[[package]]
 name = "regex"
 version = "2024.9.11"
 description = "Alternative regular expression module, to replace re."
@@ -809,4 +820,4 @@ watchdog = ["watchdog (>=2.3)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "85ea2b662d6c3e0305d3dcdfc7852d936b2c96905e082c841a54b1ae8ea7b43a"
+content-hash = "40ec8a38fb08d1d869e54e11bbcf3753f6009ca621d71bc7257c50cf4f6db738"
