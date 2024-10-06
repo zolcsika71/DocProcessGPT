@@ -37,8 +37,10 @@ PROCESSING_TIMEOUT = 300  # 5 minutes
 
 def download_nltk_resources():
     app.logger.info("Downloading NLTK resources")
-    nltk.download('punkt', quiet=True)
-    nltk.download('stopwords', quiet=True)
+    resources = ['punkt', 'stopwords', 'punkt_tab']
+    for resource in resources:
+        app.logger.info(f"Downloading NLTK resource: {resource}")
+        nltk.download(resource, quiet=True)
     app.logger.info("NLTK resources downloaded successfully")
 
 @app.route('/', methods=['GET'])
@@ -107,8 +109,15 @@ def process_pdf(filepath, filename):
             file_size = os.path.getsize(filepath)
             app.logger.info(f"File size: {file_size} bytes")
             
+            # NLTK resource loading
+            update_progress(filename, 5, 'Loading NLTK resources...')
+            start_time = time.perf_counter()
+            download_nltk_resources()
+            nltk_loading_time = time.perf_counter() - start_time
+            update_progress(filename, 10, f'NLTK resources loaded in {nltk_loading_time:.3f} seconds')
+            
             # File reading
-            update_progress(filename, 5, 'Reading PDF file...')
+            update_progress(filename, 15, 'Reading PDF file...')
             try:
                 with open(filepath, 'rb') as file:
                     app.logger.info(f"File opened successfully: {filepath}")
@@ -120,13 +129,13 @@ def process_pdf(filepath, filename):
             
             # Text extraction
             update_progress(filename, 20, 'Extracting text from PDF...')
-            start_time = time.time()
+            start_time = time.perf_counter()
             app.logger.info("Extracting text from PDF")
             try:
-                raw_text = extract_text_from_pdf(filepath, lambda progress: update_progress(filename, 20 + int(progress * 0.3), f'Extracting text: {progress}% complete'), current_app)
-                extraction_time = time.time() - start_time
-                app.logger.info(f"Text extracted from PDF, length: {len(raw_text)}, time taken: {extraction_time:.2f} seconds")
-                update_progress(filename, 50, f'Text extracted, length: {len(raw_text)} characters')
+                raw_text = extract_text_from_pdf(filepath, lambda progress: update_progress(filename, 20 + int(progress * 0.3), f'Extracting text: {progress:.1f}% complete'), current_app)
+                extraction_time = time.perf_counter() - start_time
+                app.logger.info(f"Text extracted from PDF, length: {len(raw_text)}, time taken: {extraction_time:.3f} seconds")
+                update_progress(filename, 50, f'Text extracted, length: {len(raw_text)} characters, time: {extraction_time:.3f}s')
             except Exception as e:
                 error_msg = f"Error extracting text from PDF: {str(e)}"
                 app.logger.error(error_msg)
@@ -135,13 +144,13 @@ def process_pdf(filepath, filename):
             
             # Text preprocessing
             update_progress(filename, 60, 'Preprocessing extracted text...')
-            start_time = time.time()
+            start_time = time.perf_counter()
             app.logger.info("Preprocessing extracted text")
             try:
-                processed_text = preprocess_text(raw_text, lambda progress: update_progress(filename, 60 + int(progress * 0.3), f'Preprocessing text: {progress}% complete'))
-                preprocessing_time = time.time() - start_time
-                app.logger.info(f"Text preprocessed, length: {len(processed_text)}, time taken: {preprocessing_time:.2f} seconds")
-                update_progress(filename, 90, f'Text preprocessed, length: {len(processed_text)} characters')
+                processed_text = preprocess_text(raw_text, lambda progress: update_progress(filename, 60 + int(progress * 0.3), f'Preprocessing text: {progress:.1f}% complete'))
+                preprocessing_time = time.perf_counter() - start_time
+                app.logger.info(f"Text preprocessed, length: {len(processed_text)}, time taken: {preprocessing_time:.3f} seconds")
+                update_progress(filename, 90, f'Text preprocessed, length: {len(processed_text)} characters, time: {preprocessing_time:.3f}s')
             except Exception as e:
                 error_msg = f"Error preprocessing text: {str(e)}"
                 app.logger.error(error_msg)
@@ -153,22 +162,32 @@ def process_pdf(filepath, filename):
             processed_filename = f"processed_{filename}.txt"
             processed_filepath = os.path.join(app.config['UPLOAD_FOLDER'], processed_filename)
             app.logger.info(f"Saving processed text to: {processed_filepath}")
-            start_time = time.time()
+            start_time = time.perf_counter()
             try:
                 with open(processed_filepath, 'w', encoding='utf-8') as f:
                     f.write(processed_text)
-                saving_time = time.time() - start_time
-                app.logger.info(f"Processed text saved successfully: {processed_filepath}, time taken: {saving_time:.2f} seconds")
+                saving_time = time.perf_counter() - start_time
+                app.logger.info(f"Processed text saved successfully: {processed_filepath}, time taken: {saving_time:.3f} seconds")
             except IOError as e:
                 error_msg = f"Error saving processed text: {str(e)}"
                 app.logger.error(error_msg)
                 processing_status[filename] = {'status': 'error', 'progress': 100, 'details': error_msg}
                 return
             
-            total_time = extraction_time + preprocessing_time + saving_time
-            app.logger.info(f"Total processing time: {total_time:.2f} seconds")
+            total_time = nltk_loading_time + extraction_time + preprocessing_time + saving_time
+            app.logger.info(f"Total processing time: {total_time:.3f} seconds")
             
-            processing_status[filename] = {'status': 'complete', 'progress': 100, 'filename': processed_filename, 'details': f'Processing completed in {total_time:.2f} seconds'}
+            processing_status[filename] = {
+                'status': 'complete',
+                'progress': 100,
+                'filename': processed_filename,
+                'details': f'Processing completed in {total_time:.3f} seconds',
+                'extracted_length': len(raw_text),
+                'processed_length': len(processed_text),
+                'extraction_time': extraction_time,
+                'preprocessing_time': preprocessing_time,
+                'saving_time': saving_time
+            }
         except Exception as e:
             error_msg = f"Unexpected error processing PDF {filename}: {str(e)}"
             app.logger.error(error_msg)

@@ -1,5 +1,3 @@
-2024-10-06 00:23:30,879 INFO: Rendering index page [in /home/runner/DocProcessGPT/app.py:47]
-2024-10-06 00:23:30,897 INFO: Rendering index page [in /home/runner/DocProcessGPT/app.py:47]
 2024-10-06 00:23:43,959 INFO: Rendering index page [in /home/runner/DocProcessGPT/app.py:47]
 2024-10-06 00:24:17,989 INFO: File saved: /tmp/cli-cheat-sheet.pdf [in /home/runner/DocProcessGPT/app.py:78]
 2024-10-06 00:24:17,994 INFO: Starting PDF processing for cli-cheat-sheet.pdf [in /home/runner/DocProcessGPT/app.py:106]

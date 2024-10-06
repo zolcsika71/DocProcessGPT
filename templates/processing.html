@@ -46,6 +46,10 @@
             padding: 10px;
             font-family: monospace;
         }
+        #processing-details {
+            margin-top: 20px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -56,6 +60,7 @@
         </div>
         <p id="status">Processing your PDF file, please wait...</p>
         <p id="status-details"></p>
+        <div id="processing-details"></div>
         <div id="result"></div>
         <button id="try-again-btn" class="try-again-btn" onclick="location.reload();">Try Again</button>
         <div id="log-container"></div>
@@ -77,6 +82,19 @@
             document.getElementById('try-again-btn').style.display = 'inline-block';
         }
 
+        function updateProcessingDetails(data) {
+            const details = document.getElementById('processing-details');
+            if (data.extracted_length !== undefined) {
+                details.innerHTML = `
+                    <p>Extracted text length: ${data.extracted_length} characters</p>
+                    <p>Processed text length: ${data.processed_length} characters</p>
+                    <p>Extraction time: ${data.extraction_time.toFixed(3)} seconds</p>
+                    <p>Preprocessing time: ${data.preprocessing_time.toFixed(3)} seconds</p>
+                    <p>Saving time: ${data.saving_time.toFixed(3)} seconds</p>
+                `;
+            }
+        }
+
         function checkStatus() {
             console.log("Checking status... Attempt: " + (attempts + 1));
             fetch('/process_status/{{ filename }}')
@@ -90,6 +108,7 @@
                         updateProgressBar(100);
                         document.getElementById('status').textContent = 'Processing complete!';
                         document.getElementById('status-details').textContent = data.details;
+                        updateProcessingDetails(data);
                         document.getElementById('result').innerHTML = `<a href="/processed/${data.filename}" download>Download processed text</a>`;
                     } else if (data.status === 'error') {
                         updateProgressBar(100);
