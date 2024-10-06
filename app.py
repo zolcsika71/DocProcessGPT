@@ -4,8 +4,7 @@ from logging import Formatter
 import threading
 import mimetypes
 import time
-from datetime import datetime
-import pytz
+from datetime import datetime, timezone
 from flask import Flask, request, jsonify, render_template, send_file, abort, send_from_directory, current_app
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
@@ -33,8 +32,15 @@ delete_old_logs()
 current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 log_file = os.path.join(log_directory, f'app_{current_time}.log')
 file_handler = logging.FileHandler(log_file)
-file_handler.setFormatter(Formatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]', '%m-%d %H:%M:%S'))
-file_handler.formatter.converter = lambda *args: datetime.now(pytz.utc).timetuple()
+
+class UTCFormatter(Formatter):
+    def formatTime(self, record, datefmt=None):
+        dt = datetime.fromtimestamp(record.created, timezone.utc)
+        if datefmt:
+            return dt.strftime(datefmt)
+        return dt.isoformat()
+
+file_handler.setFormatter(UTCFormatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]', '%m-%d %H:%M:%S'))
 file_handler.setLevel(logging.INFO)
 app.logger.addHandler(file_handler)
 app.logger.setLevel(logging.INFO)
