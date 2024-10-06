@@ -17,7 +17,7 @@
             height: 30px;
             background-color: #4CAF50;
             border-radius: 5px;
-            transition: width 0.5s ease-in-out;
+            transition: width 0.3s ease-in-out;
         }
         #status-details {
             margin-top: 20px;
@@ -63,7 +63,7 @@
     <script>
         console.log("Processing page loaded");
         let attempts = 0;
-        const maxAttempts = 360; // 6 minutes timeout (1 second * 360 attempts)
+        const maxAttempts = 720; // 6 minutes timeout (0.5 seconds * 720 attempts)
         const timeoutDuration = 360000; // 6 minutes timeout
 
         function updateProgressBar(percentage) {
@@ -89,7 +89,7 @@
                     if (data.status === 'complete') {
                         updateProgressBar(100);
                         document.getElementById('status').textContent = 'Processing complete!';
-                        document.getElementById('status-details').textContent = 'Your PDF has been successfully processed.';
+                        document.getElementById('status-details').textContent = data.details;
                         document.getElementById('result').innerHTML = `<a href="/processed/${data.filename}" download>Download processed text</a>`;
                     } else if (data.status === 'error') {
                         updateProgressBar(100);
@@ -100,7 +100,7 @@
                         updateProgressBar(data.progress);
                         document.getElementById('status').textContent = `Processing your PDF file, please wait... (${attempts}/${maxAttempts})`;
                         document.getElementById('status-details').textContent = data.details || 'Extracting and preprocessing text...';
-                        setTimeout(checkStatus, 1000);
+                        setTimeout(checkStatus, 500);
                     } else {
                         updateProgressBar(100);
                         showError('Processing timed out. Please try again.');
