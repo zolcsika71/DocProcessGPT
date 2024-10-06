@@ -4,6 +4,7 @@ from logging.handlers import RotatingFileHandler
 import threading
 import mimetypes
 import time
+from datetime import datetime
 from flask import Flask, request, jsonify, render_template, send_file, abort, send_from_directory, current_app
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
@@ -13,8 +14,12 @@ from text_preprocessor import preprocess_text
 app = Flask(__name__)
 
 # Set up file-based logging
-log_file = 'app.log'
-file_handler = RotatingFileHandler(log_file, maxBytes=10240, backupCount=10)
+log_directory = 'logs'
+if not os.path.exists(log_directory):
+    os.makedirs(log_directory)
+current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+log_file = os.path.join(log_directory, f'app_{current_time}.log')
+file_handler = RotatingFileHandler(log_file, maxBytes=10240, backupCount=5)
 file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
 file_handler.setLevel(logging.INFO)
 app.logger.addHandler(file_handler)
@@ -188,7 +193,11 @@ def get_processed_text(filename):
 @app.route('/view_logs')
 def view_logs():
     try:
-        with open('app.log', 'r') as log_file:
+        log_files = [f for f in os.listdir(log_directory) if f.startswith('app_') and f.endswith('.log')]
+        if not log_files:
+            return 'No log files found'
+        latest_log_file = max(log_files, key=lambda x: os.path.getctime(os.path.join(log_directory, x)))
+        with open(os.path.join(log_directory, latest_log_file), 'r') as log_file:
             logs = log_file.read()
         return render_template('view_logs.html', logs=logs)
     except Exception as e:
@@ -197,7 +206,11 @@ def view_logs():
 @app.route('/latest_logs')
 def latest_logs():
     try:
-        with open('app.log', 'r') as log_file:
+        log_files = [f for f in os.listdir(log_directory) if f.startswith('app_') and f.endswith('.log')]
+        if not log_files:
+            return jsonify({'logs': ['No log files found']})
+        latest_log_file = max(log_files, key=lambda x: os.path.getctime(os.path.join(log_directory, x)))
+        with open(os.path.join(log_directory, latest_log_file), 'r') as log_file:
             logs = log_file.readlines()[-50:]  # Get the last 50 lines
         return jsonify({'logs': logs})
     except Exception as e:

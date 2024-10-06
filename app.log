@@ -41,3 +41,4 @@ with app.app_context(). See the documentation for more information. [in /home/ru
 2024-10-06 00:04:47,786 INFO: Total processing time: 0.05 seconds [in /home/runner/DocProcessGPT/app.py:156]
 2024-10-06 00:06:57,738 INFO: Rendering index page [in /home/runner/DocProcessGPT/app.py:35]
 2024-10-06 00:06:57,856 INFO: Rendering index page [in /home/runner/DocProcessGPT/app.py:35]
+2024-10-06 00:07:11,031 INFO: Rendering index page [in /home/runner/DocProcessGPT/app.py:35]
