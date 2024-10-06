@@ -1,29 +1,26 @@
-import os
 import logging
-from logging import Formatter
-from logging.config import dictConfig
-from colorlog import ColoredFormatter
-import threading
 import mimetypes
+import os
+import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime
+
+import nltk
 from flask import (
     Flask,
-    request,
+    current_app,
     jsonify,
     render_template,
+    request,
     send_file,
-    abort,
     send_from_directory,
-    current_app,
 )
 from werkzeug.utils import secure_filename
-from werkzeug.exceptions import HTTPException
+
+from logging_config import setup_logging
 from pdf_processor import extract_text_from_pdf
 from text_preprocessor import preprocess_text
-import nltk
-from logging_config import setup_logging
-from time_utils import get_current_utc_time, format_time
+from time_utils import format_time, get_current_utc_time
 
 app = Flask(__name__)
 
@@ -41,6 +38,7 @@ def calculate_processing_time(start_time):
 
 
 def delete_old_logs():
+    """Delete old log files, keeping only the most recent one."""
     log_files = [
         f
         for f in os.listdir(log_directory)
@@ -56,18 +54,18 @@ def delete_old_logs():
 
 # Call delete_old_logs before creating a new log file
 delete_old_logs()
-
 current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 log_file = os.path.join(log_directory, f"app_{current_time}.log")
 file_handler = logging.FileHandler(log_file)
 
 
-class UTCFormatter(Formatter):
+class UTCFormatter(logging.Formatter):
+    """Custom formatter to use UTC time."""
+
     def formatTime(self, record, datefmt=None):
         return format_time(record.created, datefmt)
 
 
-# Use the utility function for logging the start time
 app.logger.info(f"Application started. Current UTC time: {get_current_utc_time()}")
 file_handler.setFormatter(
     UTCFormatter(
@@ -78,11 +76,6 @@ file_handler.setFormatter(
 file_handler.setLevel(logging.INFO)
 app.logger.addHandler(file_handler)
 app.logger.setLevel(logging.INFO)
-
-# Add a log entry at the beginning of the app to verify the UTC time
-app.logger.info(
-    f"Application started. Current UTC time: {datetime.now(timezone.utc).strftime('%m-%d %H:%M:%S')}"
-)
 
 app.config["UPLOAD_FOLDER"] = "/tmp"
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max file size
@@ -95,6 +88,7 @@ PROCESSING_TIMEOUT = 300  # 5 minutes
 
 
 def download_nltk_resources():
+    """Check and download necessary NLTK resources."""
     app.logger.info("Checking and downloading NLTK resources")
     resources = ["punkt", "stopwords", "punkt_tab"]
     for resource in resources:
@@ -117,6 +111,7 @@ def download_nltk_resources():
 
 @app.route("/", methods=["GET"])
 def index():
+    """Render the index page for file upload."""
     try:
         app.logger.info("Rendering index page")
         return render_template("upload.html")
@@ -127,11 +122,13 @@ def index():
 
 @app.route("/static/<path:filename>")
 def serve_static(filename):
+    """Serve static files."""
     return send_from_directory("static", filename)
 
 
 @app.route("/upload", methods=["POST"])
 def upload_file():
+    """Handle file upload and initiate processing."""
     try:
         if "file" not in request.files:
             app.logger.error("No file part in the request")
@@ -153,7 +150,6 @@ def upload_file():
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         file.save(filepath)
-
         app.logger.info(f"File uploaded successfully: {filepath}")
 
         # Initialize processing status
@@ -165,7 +161,6 @@ def upload_file():
 
         # Start processing in a background thread
         threading.Thread(target=process_pdf, args=(filepath, filename)).start()
-
         return render_template("processing.html", filename=filename)
     except Exception as e:
         app.logger.error(f"Error in upload_file: {str(e)}")
@@ -173,12 +168,14 @@ def upload_file():
 
 
 def update_progress(filename, progress, details):
+    """Update the processing progress of a file."""
     processing_status[filename]["progress"] = progress
     processing_status[filename]["details"] = details
     app.logger.info(f"Processing progress for {filename}: {progress}% - {details}")
 
 
 def process_pdf(filepath, filename):
+    """Process the uploaded PDF file."""
     with app.app_context():
 
         def timeout_handler():
@@ -193,7 +190,6 @@ def process_pdf(filepath, filename):
 
         timer = threading.Timer(PROCESSING_TIMEOUT, timeout_handler)
         timer.start()
-
         try:
             app.logger.info(f"Starting PDF processing for {filename}")
             file_size = os.path.getsize(filepath)
@@ -319,7 +315,6 @@ def process_pdf(filepath, filename):
                 nltk_loading_time + extraction_time + preprocessing_time + saving_time
             )
             app.logger.info(f"Total processing time: {total_time:.3f} seconds")
-
             processing_status[filename] = {
                 "status": "complete",
                 "progress": 100,
@@ -350,8 +345,8 @@ def process_pdf(filepath, filename):
 
 @app.route("/process_status/<filename>", methods=["GET"])
 def process_status(filename):
+    """Check the processing status of a file."""
     app.logger.info(f"Checking process status for: {filename}")
-
     if filename in processing_status:
         return jsonify(processing_status[filename])
     else:
@@ -366,11 +361,13 @@ def process_status(filename):
 
 @app.route("/processing/<filename>")
 def processing(filename):
+    """Render the processing page for a specific file."""
     return render_template("processing.html", filename=filename)
 
 
 @app.route("/processed/<filename>", methods=["GET"])
 def get_processed_text(filename):
+    """Download the processed text file."""
     filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
     if os.path.exists(filepath):
         return send_file(filepath, as_attachment=True)
@@ -380,6 +377,7 @@ def get_processed_text(filename):
 
 @app.route("/view_logs")
 def view_logs():
+    """View the contents of the latest log file."""
     try:
         log_files = [
             f
@@ -400,6 +398,7 @@ def view_logs():
 
 @app.route("/latest_logs")
 def latest_logs():
+    """Get the latest log entries."""
     try:
         log_files = [
             f
@@ -421,12 +420,14 @@ def latest_logs():
 
 @app.errorhandler(500)
 def internal_server_error(e):
+    """Handle internal server errors."""
     app.logger.error(f"500 error: {str(e)}")
     return jsonify(error=str(e)), 500
 
 
 @app.errorhandler(Exception)
 def handle_exception(e):
+    """Handle unhandled exceptions."""
     app.logger.error(f"Unhandled exception: {str(e)}")
     return jsonify(error="An unexpected error occurred"), 500
 
