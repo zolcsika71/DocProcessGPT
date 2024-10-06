@@ -18,6 +18,17 @@ app = Flask(__name__)
 log_directory = 'logs'
 if not os.path.exists(log_directory):
     os.makedirs(log_directory)
+
+def delete_old_logs():
+    log_files = [f for f in os.listdir(log_directory) if f.startswith('app_') and f.endswith('.log')]
+    if len(log_files) > 1:
+        log_files.sort(key=lambda x: os.path.getctime(os.path.join(log_directory, x)), reverse=True)
+        for old_file in log_files[1:]:
+            os.remove(os.path.join(log_directory, old_file))
+
+# Call delete_old_logs before creating a new log file
+delete_old_logs()
+
 current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 log_file = os.path.join(log_directory, f'app_{current_time}.log')
 file_handler = RotatingFileHandler(log_file, maxBytes=10240, backupCount=5)
@@ -77,7 +88,7 @@ def upload_file():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
-        app.logger.info(f"File saved: {filepath}")
+        app.logger.info(f"File uploaded successfully: {filepath}")
         
         # Initialize processing status
         processing_status[filename] = {'status': 'processing', 'progress': 0, 'details': 'Starting PDF processing...'}
