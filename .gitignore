@@ -1,0 +1,73 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.egg-info/
+dist/
+build/
+.idea/
+
+# Flask specific
+instance/
+.webassets-cache
+
+# Pytest
+.cache
+
+# Pyre type checker
+.pyre/
+
+# Pytype static type analyzer
+.pytype/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Logs
+logs/
+*.log
+
+# Local development files
+*.local
+
+# MacOS
+.DS_Store
+
+# Nix
+result/
+.nix-channels
+.nix-defexpr
+.nix-gcroots
+.nix-profile
+.nix-defexpr
+.nix-channels
+
+# Replit specific
+.replit
+.replit.nix
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
