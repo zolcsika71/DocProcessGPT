@@ -3,7 +3,6 @@ import logging
 from logging import Formatter
 import threading
 import mimetypes
-import time
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify, render_template, send_file, abort, send_from_directory, current_app
 from werkzeug.utils import secure_filename
@@ -31,21 +30,21 @@ delete_old_logs()
 
 current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 log_file = os.path.join(log_directory, f'app_{current_time}.log')
-file_handler = logging.FileHandler(log_file)
 
-class UTCFormatter(Formatter):
+class UTCFormatter(logging.Formatter):
     def formatTime(self, record, datefmt=None):
         dt = datetime.fromtimestamp(record.created, timezone.utc)
         if datefmt:
             return dt.strftime(datefmt)
         return dt.isoformat()
 
+file_handler = logging.FileHandler(log_file)
 file_handler.setFormatter(UTCFormatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]', '%m-%d %H:%M:%S'))
 file_handler.setLevel(logging.INFO)
 app.logger.addHandler(file_handler)
 app.logger.setLevel(logging.INFO)
 
-# Add a log entry at the beginning of the app to verify the UTC time
+# Add a test log entry at the beginning of the app to verify the UTC time
 app.logger.info(f"Application started. Current UTC time: {datetime.now(timezone.utc).strftime('%m-%d %H:%M:%S')}")
 
 app.config['UPLOAD_FOLDER'] = '/tmp'
@@ -59,7 +58,7 @@ PROCESSING_TIMEOUT = 300  # 5 minutes
 
 def download_nltk_resources():
     app.logger.info("Downloading NLTK resources")
-    resources = ['punkt', 'stopwords', 'punkt_tab']
+    resources = ['punkt', 'stopwords']
     for resource in resources:
         app.logger.info(f"Downloading NLTK resource: {resource}")
         nltk.download(resource, quiet=True)
@@ -102,7 +101,7 @@ def upload_file():
         app.logger.info(f"File uploaded successfully: {filepath}")
         
         # Initialize processing status
-        processing_status[filename] = {'status': 'processing', 'progress': 0, 'details': 'Starting PDF processing...'}
+        processing_status[filename] = {'status': 'processing', 'progress': 0, 'stage': 'upload', 'details': 'Starting PDF processing...'}
         
         # Start processing in a background thread
         threading.Thread(target=process_pdf, args=(filepath, filename)).start()
@@ -112,16 +111,17 @@ def upload_file():
         app.logger.error(f"Error in upload_file: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-def update_progress(filename, progress, details):
+def update_progress(filename, progress, stage, details):
     processing_status[filename]['progress'] = progress
+    processing_status[filename]['stage'] = stage
     processing_status[filename]['details'] = details
-    app.logger.info(f"Processing progress for {filename}: {progress}% - {details}")
+    app.logger.info(f"Processing progress for {filename}: {progress}% - Stage: {stage} - {details}")
 
 def process_pdf(filepath, filename):
     with app.app_context():
         def timeout_handler():
             app.logger.error(f"PDF processing timed out after {PROCESSING_TIMEOUT} seconds for {filename}")
-            processing_status[filename] = {'status': 'error', 'progress': 100, 'details': f'PDF processing timed out after {PROCESSING_TIMEOUT} seconds'}
+            processing_status[filename] = {'status': 'error', 'progress': 100, 'stage': 'error', 'details': f'PDF processing timed out after {PROCESSING_TIMEOUT} seconds'}
 
         timer = threading.Timer(PROCESSING_TIMEOUT, timeout_handler)
         timer.start()
@@ -132,68 +132,68 @@ def process_pdf(filepath, filename):
             app.logger.info(f"File size: {file_size} bytes")
             
             # NLTK resource loading
-            update_progress(filename, 5, 'Loading NLTK resources...')
-            start_time = time.perf_counter()
+            update_progress(filename, 5, 'upload', 'Loading NLTK resources...')
+            start_time = datetime.now(timezone.utc)
             download_nltk_resources()
-            nltk_loading_time = time.perf_counter() - start_time
-            update_progress(filename, 10, f'NLTK resources loaded in {nltk_loading_time:.3f} seconds')
+            nltk_loading_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+            update_progress(filename, 10, 'upload', f'NLTK resources loaded in {nltk_loading_time:.3f} seconds')
             
             # File reading
-            update_progress(filename, 15, 'Reading PDF file...')
+            update_progress(filename, 15, 'extract', 'Reading PDF file...')
             try:
                 with open(filepath, 'rb') as file:
                     app.logger.info(f"File opened successfully: {filepath}")
             except IOError as e:
                 error_msg = f"Error opening file: {str(e)}"
                 app.logger.error(error_msg)
-                processing_status[filename] = {'status': 'error', 'progress': 100, 'details': error_msg}
+                processing_status[filename] = {'status': 'error', 'progress': 100, 'stage': 'error', 'details': error_msg}
                 return
             
             # Text extraction
-            update_progress(filename, 20, 'Extracting text from PDF...')
-            start_time = time.perf_counter()
+            update_progress(filename, 20, 'extract', 'Extracting text from PDF...')
+            start_time = datetime.now(timezone.utc)
             app.logger.info("Extracting text from PDF")
             try:
-                raw_text = extract_text_from_pdf(filepath, lambda progress: update_progress(filename, 20 + int(progress * 0.3), f'Extracting text: {progress:.1f}% complete'), current_app)
-                extraction_time = time.perf_counter() - start_time
+                raw_text = extract_text_from_pdf(filepath, lambda progress: update_progress(filename, 20 + int(progress * 0.3), 'extract', f'Extracting text: {progress:.1f}% complete'), current_app)
+                extraction_time = (datetime.now(timezone.utc) - start_time).total_seconds()
                 app.logger.info(f"Text extracted from PDF, length: {len(raw_text)}, time taken: {extraction_time:.3f} seconds")
-                update_progress(filename, 50, f'Text extracted, length: {len(raw_text)} characters, time: {extraction_time:.3f}s')
+                update_progress(filename, 50, 'extract', f'Text extracted, length: {len(raw_text)} characters, time: {extraction_time:.3f}s')
             except Exception as e:
                 error_msg = f"Error extracting text from PDF: {str(e)}"
                 app.logger.error(error_msg)
-                processing_status[filename] = {'status': 'error', 'progress': 100, 'details': error_msg}
+                processing_status[filename] = {'status': 'error', 'progress': 100, 'stage': 'error', 'details': error_msg}
                 return
             
             # Text preprocessing
-            update_progress(filename, 60, 'Preprocessing extracted text...')
-            start_time = time.perf_counter()
+            update_progress(filename, 60, 'preprocess', 'Preprocessing extracted text...')
+            start_time = datetime.now(timezone.utc)
             app.logger.info("Preprocessing extracted text")
             try:
-                processed_text = preprocess_text(raw_text, lambda progress: update_progress(filename, 60 + int(progress * 0.3), f'Preprocessing text: {progress:.1f}% complete'))
-                preprocessing_time = time.perf_counter() - start_time
+                processed_text = preprocess_text(raw_text, lambda progress: update_progress(filename, 60 + int(progress * 0.3), 'preprocess', f'Preprocessing text: {progress:.1f}% complete'))
+                preprocessing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
                 app.logger.info(f"Text preprocessed, length: {len(processed_text)}, time taken: {preprocessing_time:.3f} seconds")
-                update_progress(filename, 90, f'Text preprocessed, length: {len(processed_text)} characters, time: {preprocessing_time:.3f}s')
+                update_progress(filename, 90, 'preprocess', f'Text preprocessed, length: {len(processed_text)} characters, time: {preprocessing_time:.3f}s')
             except Exception as e:
                 error_msg = f"Error preprocessing text: {str(e)}"
                 app.logger.error(error_msg)
-                processing_status[filename] = {'status': 'error', 'progress': 100, 'details': error_msg}
+                processing_status[filename] = {'status': 'error', 'progress': 100, 'stage': 'error', 'details': error_msg}
                 return
             
             # Saving processed text
-            update_progress(filename, 95, 'Saving processed text...')
+            update_progress(filename, 95, 'save', 'Saving processed text...')
             processed_filename = f"processed_{filename}.txt"
             processed_filepath = os.path.join(app.config['UPLOAD_FOLDER'], processed_filename)
             app.logger.info(f"Saving processed text to: {processed_filepath}")
-            start_time = time.perf_counter()
+            start_time = datetime.now(timezone.utc)
             try:
                 with open(processed_filepath, 'w', encoding='utf-8') as f:
                     f.write(processed_text)
-                saving_time = time.perf_counter() - start_time
+                saving_time = (datetime.now(timezone.utc) - start_time).total_seconds()
                 app.logger.info(f"Processed text saved successfully: {processed_filepath}, time taken: {saving_time:.3f} seconds")
             except IOError as e:
                 error_msg = f"Error saving processed text: {str(e)}"
                 app.logger.error(error_msg)
-                processing_status[filename] = {'status': 'error', 'progress': 100, 'details': error_msg}
+                processing_status[filename] = {'status': 'error', 'progress': 100, 'stage': 'error', 'details': error_msg}
                 return
             
             total_time = nltk_loading_time + extraction_time + preprocessing_time + saving_time
@@ -202,6 +202,7 @@ def process_pdf(filepath, filename):
             processing_status[filename] = {
                 'status': 'complete',
                 'progress': 100,
+                'stage': 'save',
                 'filename': processed_filename,
                 'details': f'Processing completed in {total_time:.3f} seconds',
                 'file_size': file_size,
@@ -218,7 +219,7 @@ def process_pdf(filepath, filename):
         except Exception as e:
             error_msg = f"Unexpected error processing PDF {filename}: {str(e)}"
             app.logger.error(error_msg)
-            processing_status[filename] = {'status': 'error', 'progress': 100, 'details': error_msg}
+            processing_status[filename] = {'status': 'error', 'progress': 100, 'stage': 'error', 'details': error_msg}
         finally:
             timer.cancel()
 
@@ -229,7 +230,7 @@ def process_status(filename):
     if filename in processing_status:
         return jsonify(processing_status[filename])
     else:
-        return jsonify({'status': 'error', 'progress': 100, 'details': 'File not found or processing not started'})
+        return jsonify({'status': 'error', 'progress': 100, 'stage': 'error', 'details': 'File not found or processing not started'})
 
 @app.route('/processing/<filename>')
 def processing(filename):

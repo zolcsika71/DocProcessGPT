@@ -19,6 +19,21 @@
             border-radius: 5px;
             transition: width 0.3s ease-in-out;
         }
+        .progress-stage {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        .progress-stage div {
+            flex: 1;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+        .progress-stage .active {
+            font-weight: bold;
+            color: #4CAF50;
+        }
         #status-details {
             margin-top: 20px;
             font-style: italic;
@@ -46,16 +61,6 @@
             padding: 10px;
             font-family: monospace;
         }
-        #processing-summary, #processing-details {
-            margin-top: 20px;
-            font-size: 14px;
-        }
-        #progress-details {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #f0f0f0;
-            border-radius: 5px;
-        }
     </style>
 </head>
 <body>
@@ -64,18 +69,20 @@
         <div class="progress-container">
             <div id="progress-bar" class="progress-bar"></div>
         </div>
+        <div class="progress-stage">
+            <div id="stage-upload">Upload</div>
+            <div id="stage-extract">Extract</div>
+            <div id="stage-preprocess">Preprocess</div>
+            <div id="stage-save">Save</div>
+        </div>
         <p id="status">Processing your PDF file, please wait...</p>
         <p id="status-details"></p>
-        <div id="progress-details"></div>
-        <div id="processing-summary"></div>
-        <div id="processing-details"></div>
         <div id="result"></div>
         <button id="try-again-btn" class="try-again-btn" onclick="location.reload();">Try Again</button>
         <h2>Real-time Logs</h2>
         <div id="log-container"></div>
     </div>
     <script>
-        console.log("Processing page loaded");
         let attempts = 0;
         const maxAttempts = 720; // 6 minutes timeout (0.5 seconds * 720 attempts)
         const timeoutDuration = 360000; // 6 minutes timeout
@@ -83,7 +90,17 @@
         function updateProgressBar(percentage) {
             const progressBar = document.getElementById('progress-bar');
             progressBar.style.width = percentage + '%';
-            console.log(`Progress updated: ${percentage}%`);
+        }
+
+        function updateStage(stage) {
+            const stages = ['upload', 'extract', 'preprocess', 'save'];
+            stages.forEach(s => {
+                const el = document.getElementById(`stage-${s}`);
+                el.classList.remove('active');
+                if (s === stage) {
+                    el.classList.add('active');
+                }
+            });
         }
 
         function showError(message) {
@@ -91,66 +108,15 @@
             document.getElementById('try-again-btn').style.display = 'inline-block';
         }
 
-        function updateProcessingSummary(data) {
-            const summary = document.getElementById('processing-summary');
-            summary.innerHTML = `
-                <h2>Processing Summary</h2>
-                <p><strong>Original file size:</strong> ${(data.file_size / 1024).toFixed(2)} KB</p>
-                <p><strong>Extracted text length:</strong> ${data.extracted_length} characters</p>
-                <p><strong>Processed text length:</strong> ${data.processed_length} characters</p>
-                <p><strong>Text extraction time:</strong> ${data.extraction_time.toFixed(3)} seconds</p>
-                <p><strong>Text preprocessing time:</strong> ${data.preprocessing_time.toFixed(3)} seconds</p>
-                <p><strong>Total processing time:</strong> ${data.total_time.toFixed(3)} seconds</p>
-            `;
-        }
-
-        function updateProcessingDetails(data) {
-            const details = document.getElementById('processing-details');
-            details.innerHTML = `
-                <h3>Technical Details</h3>
-                <p>NLTK loading time: ${data.nltk_loading_time.toFixed(3)} seconds</p>
-                <p>Saving time: ${data.saving_time.toFixed(3)} seconds</p>
-                <p>File path: ${data.file_path}</p>
-                <p>Processed file path: ${data.processed_file_path}</p>
-            `;
-        }
-
-        function updateProgressDetails(details) {
-            const progressDetails = document.getElementById('progress-details');
-            const lines = details.split('\n');
-            let html = '';
-            for (const line of lines) {
-                if (line.includes('File uploaded successfully:')) {
-                    html += '<p>File uploaded successfully</p>';
-                } else if (line.includes('Starting PDF processing for')) {
-                    html += '<p>Starting PDF processing</p>';
-                } else if (line.includes('Processing progress for')) {
-                    const match = line.match(/Processing progress for (.*?): (\d+)% - (.*)/);
-                    if (match) {
-                        const [, filename, progress, status] = match;
-                        html += `<p>File: ${filename}<br>Progress: ${progress}%<br>Status: ${status}</p>`;
-                    }
-                }
-            }
-            progressDetails.innerHTML = html;
-        }
-
         function checkStatus() {
-            console.log("Checking status... Attempt: " + (attempts + 1));
             fetch('/process_status/{{ filename }}')
-                .then(response => {
-                    console.log("Status check response received");
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
-                    console.log("Status check response:", data);
                     if (data.status === 'complete') {
                         updateProgressBar(100);
+                        updateStage('save');
                         document.getElementById('status').textContent = 'Processing complete!';
                         document.getElementById('status-details').textContent = data.details;
-                        updateProgressDetails(data.details);
-                        updateProcessingSummary(data);
-                        updateProcessingDetails(data);
                         document.getElementById('result').innerHTML = `<a href="/processed/${data.filename}" download>Download processed text</a>`;
                     } else if (data.status === 'error') {
                         updateProgressBar(100);
@@ -159,9 +125,9 @@
                     } else if (attempts < maxAttempts) {
                         attempts++;
                         updateProgressBar(data.progress);
+                        updateStage(data.stage);
                         document.getElementById('status').textContent = `Processing your PDF file, please wait... (${attempts}/${maxAttempts})`;
                         document.getElementById('status-details').textContent = data.details || 'Extracting and preprocessing text...';
-                        updateProgressDetails(data.details);
                         setTimeout(checkStatus, 500);
                     } else {
                         updateProgressBar(100);
@@ -171,7 +137,6 @@
                 })
                 .catch(error => {
                     console.error('Error checking status:', error);
-                    updateProgressBar(100);
                     showError('An error occurred while processing the PDF.');
                     document.getElementById('status-details').textContent = 'There was a problem communicating with the server.';
                 });
