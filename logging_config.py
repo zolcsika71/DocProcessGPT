@@ -31,6 +31,8 @@ def setup_logging():
     current_run_id = str(uuid.uuid4())  # Using UUID for uniqueness
     log_filename = f"app_{current_run_id}.log"
 
+    print(f"Log file will be: {log_filename}")
+
     # Remove old logs not connected to the current server run
     cleanup_old_logs(current_run_id)
 
@@ -53,18 +55,18 @@ def setup_logging():
     file_handler = logging.FileHandler(os.path.join(LOG_DIRECTORY, log_filename))
     file_handler.setFormatter(
         logging.Formatter(
-            "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]",
+            "%(asctime)s %(levelname)s [%(module)s]: %(message)s [in %(pathname)s:%(lineno)d]",
             "%m-%d %H:%M:%S",
         )
     )
     file_handler.setLevel(getattr(logging, LOG_LEVEL))
 
-    logger = logging.getLogger(__name__)
-    logger.setLevel(getattr(logging, LOG_LEVEL))
-    logger.addHandler(console_handler)
-    logger.addHandler(file_handler)
+    logger_setup = logging.getLogger(__name__)
+    logger_setup.setLevel(getattr(logging, LOG_LEVEL))
+    logger_setup.addHandler(console_handler)
+    logger_setup.addHandler(file_handler)
 
-    return logger
+    return logger_setup
 
 
 # Initialize the logger

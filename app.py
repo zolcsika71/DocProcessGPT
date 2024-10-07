@@ -3,7 +3,6 @@ import os
 import mimetypes
 import threading
 import time
-import nltk
 from flask import (
     current_app,
     jsonify,
@@ -24,7 +23,6 @@ from config import (
     PROCESSING_TIMEOUT,
 )
 from text_preprocessor import download_nltk_resources
-
 
 
 app = Flask(__name__)

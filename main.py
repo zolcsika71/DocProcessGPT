@@ -2,14 +2,11 @@ import sys
 import os
 from app import app
 from logging_config import logger
-from config import PROJECT_ROOT
-
 
 # Use the logger from LoggerManager
 
 logger.info(f"Python version: {sys.version}")
 logger.info(f"Current working directory: {os.getcwd()}")
-logger.info(f"PROJECT_ROOT: {PROJECT_ROOT}")
 logger.info(f"PYTHONPATH: {os.environ.get('PYTHONPATH', 'Not set')}")
 
 
