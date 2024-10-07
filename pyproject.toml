@@ -16,6 +16,8 @@ nltk = "^3.9.1"
 reportlab = "^4.2.5"
 pytz = "^2024.2"
 colorlog = "^6.8.2"
+python-dotenv = "^1.0.1"
+
 
 
 [build-system]

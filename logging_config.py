@@ -1,17 +1,41 @@
 # logging_config.py
-import os
 import logging
-from logging import Formatter
-from logging.config import dictConfig
+import os
 from colorlog import ColoredFormatter
+from config import LOG_DIRECTORY, LOG_LEVEL
+import uuid
+import glob
 
 
-def setup_logging(log_directory="logs"):
-    if not os.path.exists(log_directory):
-        os.makedirs(log_directory)
+def cleanup_old_logs(current_run_id):
+    """
+    Deletes old log files that are not associated with the current server run.
+    Keeps only the log files related to the current run, identified by current_run_id.
+    """
+    for log_file in glob.glob(os.path.join(LOG_DIRECTORY, "app_*.log")):
+        if current_run_id not in log_file:
+            try:
+                os.remove(log_file)
+                print(
+                    f"Deleted old log file: {log_file}"
+                )  # Use print as logging might not be set up yet
+            except OSError as e:
+                print(f"Error deleting file {log_file}: {e}")
+
+
+def setup_logging():
+    if not os.path.exists(LOG_DIRECTORY):
+        os.makedirs(LOG_DIRECTORY)
+
+    # Generate a unique identifier for this run
+    current_run_id = str(uuid.uuid4())  # Using UUID for uniqueness
+    log_filename = f"app_{current_run_id}.log"
+
+    # Remove old logs not connected to the current server run
+    cleanup_old_logs(current_run_id)
 
     formatter = ColoredFormatter(
-        "%(log_color)s%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]",
+        "%(log_color)s%(asctime)s %(levelname)s [%(module)s]: %(message)s [in %(pathname)s:%(lineno)d]",
         datefmt="%m-%d %H:%M:%S",
         log_colors={
             "DEBUG": "cyan",
@@ -21,13 +45,27 @@ def setup_logging(log_directory="logs"):
             "CRITICAL": "bold_red",
         },
     )
+
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
-    file_handler = logging.FileHandler(os.path.join(log_directory, "app.log"))
+    console_handler.setLevel(getattr(logging, LOG_LEVEL))
+
+    file_handler = logging.FileHandler(os.path.join(LOG_DIRECTORY, log_filename))
     file_handler.setFormatter(
         logging.Formatter(
             "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]",
             "%m-%d %H:%M:%S",
         )
     )
-    logging.basicConfig(level=logging.DEBUG, handlers=[console_handler, file_handler])
+    file_handler.setLevel(getattr(logging, LOG_LEVEL))
+
+    logger = logging.getLogger(__name__)
+    logger.setLevel(getattr(logging, LOG_LEVEL))
+    logger.addHandler(console_handler)
+    logger.addHandler(file_handler)
+
+    return logger
+
+
+# Initialize the logger
+logger = setup_logging()

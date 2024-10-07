@@ -1,16 +1,20 @@
 import nltk
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
-import logging
-
-# Set up logging
-logger = logging.getLogger(__name__)
 
 
-def download_nltk_data():
-    resources = ["punkt", "stopwords"]
+# List of NLTK resources required by the application
+import nltk
+from logging_config import logger
+
+
+def download_nltk_resources():
+    # List of NLTK resources required by the application
+    resources = ["punkt", "stopwords", "punkt_tab"]
+
     for resource in resources:
         try:
+            # Check if the resource is already available
             nltk.data.find(
                 f"tokenizers/{resource}"
                 if resource == "punkt"
@@ -18,15 +22,13 @@ def download_nltk_data():
             )
             logger.info(f"NLTK resource '{resource}' is already available.")
         except LookupError:
+            # If the resource is not found, download it
             try:
                 nltk.download(resource, quiet=True)
                 logger.info(f"NLTK resource '{resource}' downloaded successfully.")
             except Exception as e:
                 logger.error(f"Error downloading NLTK resource '{resource}': {e}")
                 logger.warning("Using fallback tokenization and stopwords removal.")
-
-
-download_nltk_data()
 
 
 # Add fallback tokenization and stopwords
@@ -258,25 +260,30 @@ def preprocess_text(text, progress_callback=None):
         )
         return preprocessed_text
     except Exception as e:
-        logger.error(f"Error during text preprocessing: {e}")
-        logger.warning("Using fallback preprocessing method.")
+        return _extracted_from_preprocess_text_41(e, text)
 
-        # Check for specific NLTK resource issues
-        if "Resource punkt not found" in str(e):
-            logger.error(
-                "NLTK 'punkt' resource is missing. Please download it using nltk.download('punkt')"
-            )
-        if "Resource stopwords not found" in str(e):
-            logger.error(
-                "NLTK 'stopwords' resource is missing. Please download it using nltk.download('stopwords')"
-            )
 
-        # Fallback tokenization and stopwords removal
-        logger.info("Starting fallback preprocessing")
-        tokens = fallback_tokenize(text)
-        logger.info(f"Fallback tokenization complete: {len(tokens)} tokens")
-        filtered_tokens = [token for token in tokens if token not in fallback_stopwords]
-        logger.info(
-            f"Fallback stopwords removed: {len(tokens) - len(filtered_tokens)} stopwords"
+# TODO Rename this here and in `preprocess_text`
+def _extracted_from_preprocess_text_41(e, text):
+    logger.error(f"Error during text preprocessing: {e}")
+    logger.warning("Using fallback preprocessing method.")
+
+    # Check for specific NLTK resource issues
+    if "Resource punkt not found" in str(e):
+        logger.error(
+            "NLTK 'punkt' resource is missing. Please download it using nltk.download('punkt')"
         )
-        return " ".join(filtered_tokens)
+    if "Resource stopwords not found" in str(e):
+        logger.error(
+            "NLTK 'stopwords' resource is missing. Please download it using nltk.download('stopwords')"
+        )
+
+    # Fallback tokenization and stopwords removal
+    logger.info("Starting fallback preprocessing")
+    tokens = fallback_tokenize(text)
+    logger.info(f"Fallback tokenization complete: {len(tokens)} tokens")
+    filtered_tokens = [token for token in tokens if token not in fallback_stopwords]
+    logger.info(
+        f"Fallback stopwords removed: {len(tokens) - len(filtered_tokens)} stopwords"
+    )
+    return " ".join(filtered_tokens)
