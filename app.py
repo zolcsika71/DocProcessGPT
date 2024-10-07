@@ -25,7 +25,7 @@ from config import (
 )
 from text_preprocessor import download_nltk_resources
 
-download_nltk_resources()
+
 
 app = Flask(__name__)
 
